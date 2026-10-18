@@ -107,6 +107,13 @@ body{
 .grade .sub{display:block;font-size:11px;color:var(--muted2);font-weight:400;margin-top:2px}
 .swatch{width:52px;height:52px;border-radius:14px;border:1px solid rgba(255,255,255,.14);
   margin-left:auto;align-self:center;box-shadow:0 8px 26px rgba(0,0,0,.4)}
+.nn-row{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12.5px;flex-wrap:wrap}
+.nn-tag{font-size:10.5px;letter-spacing:.04em;color:var(--muted2);border:1px solid var(--line2);
+  border-radius:999px;padding:2px 9px}
+.nn-v{font-family:var(--mono);font-size:14px;color:var(--text);font-variant-numeric:tabular-nums}
+.nn-d{font-size:11px;color:var(--muted2)}
+.nn-d.up{color:#f0d3a0}
+.nn-d.dn{color:#a9c8e8}
 .meta-row{display:flex;gap:22px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
 .meta-item .k{font-size:10px;color:var(--muted2);letter-spacing:.05em}
 .meta-item .v{font-size:14px;margin-top:1px;font-variant-numeric:tabular-nums}
@@ -289,6 +296,7 @@ footer a{color:var(--muted);text-decoration:none;border-bottom:1px solid var(--l
         <div class="grade" id="heroGrade">—</div>
         <div class="swatch" id="heroSwatch"></div>
       </div>
+      <div class="nn-row" id="heroNN" hidden></div>
       <div class="meta-row" id="heroMeta"></div>
     </div>
 
@@ -1113,6 +1121,20 @@ function fillAux(w, wa) {
   return used;
 }
 
+/* 神经网络评分。15 个输入与 Python service._nn_features 逐项对应：
+   三层云量 + 上游两层云量 + 湿度/边界层/太阳高度 + 7 个物理子项。 */
+function nnScore(w, elev) {
+  const f = featuresFromWeather(w, elev);
+  const feats = [
+    w.cc_low || 0, w.cc_mid || 0, w.cc_high || 0,
+    w.cc_low_up || 0, w.cc_mid_up || 0,
+    w.rh || 0, w.blh || 0, elev,
+    f.canvas, f.canvas_high, f.light, f.horizon, f.purity, f.aod, f.precip,
+  ];
+  const p = nnPredict(feats, NN);
+  return p == null ? null : p;
+}
+
 /* ---------------- confidence / reasons / risks ---------------- */
 function confidence(lead, sourceKind, w) {
   let c;
@@ -1355,6 +1377,7 @@ async function run() {
         const o = dateInOffset(localMs, 0);
         per[s.id] = Object.assign(r, {
           id: s.id, origin: "relay",
+          nn: round(nnScore(w, elev), 4),
           time: new Date(ev).toISOString(),
           time_label: pad2(o.hh) + ":" + pad2(o.mm),
           window: bestWindow(timeline(w, ev, state.lat, state.lon, MODEL)),
@@ -1597,6 +1620,20 @@ function render(data) {
       + Math.round((prim.confidence || 0) * 100) + "%</span>";
     $("#heroGrade").style.color = prim.grade_color;
     $("#heroSwatch").style.background = prim.colour.hex;
+    // 神经网络：与物理概率并列的独立估计，只展示不参与打分
+    const nnEl = $("#heroNN");
+    if (prim.nn == null) {
+      nnEl.hidden = true;
+      nnEl.innerHTML = "";
+    } else {
+      const dpp = Math.round((prim.nn - prim.probability) * 100);
+      nnEl.hidden = false;
+      nnEl.innerHTML = '<span class="nn-tag">神经网络 MLP</span>'
+        + '<span class="nn-v">' + Math.round(prim.nn * 100) + "%</span>"
+        + '<span class="nn-d ' + (dpp >= 0 ? "up" : "dn") + '">'
+        + (dpp >= 0 ? "高于" : "低于") + "物理 " + Math.abs(dpp) + "pp</span>";
+    }
+
     const win = prim.window;
     $("#heroMeta").innerHTML = [
       ["最佳窗口", win ? (win.start_min + " → " + win.end_min + " 分") : "—"],
@@ -1963,6 +2000,7 @@ function init() {
   $("#weekGrid").innerHTML = '<div class="empty">点击「开始预测」后显示七日趋势</div>';
   $("#heroPct").innerHTML = '—<small>%</small>';
   $("#heroGrade").textContent = '尚未预测';
+  $("#heroNN").hidden = true;
 }
 
 init();
