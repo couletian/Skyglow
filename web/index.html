@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>霞光 Skyglow · 火烧云概率预报</title>
+<meta name="description" content="基于 ERA5 分层云量、CAMS 气溶胶光学厚度与太阳几何的朝霞/晚霞定量预报，含历史回测验证。">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PGNpcmNsZSBjeD0iMTYiIGN5PSIxOSIgcj0iOCIgZmlsbD0iI2ZmN2E0ZCIvPjxwYXRoIGQ9Ik0yIDI1aDI4IiBzdHJva2U9IiNmZmIwNzAiIHN0cm9rZS13aWR0aD0iMiIvPjwvc3ZnPg==">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="bg-glow" aria-hidden="true"></div>
+
+<header class="top">
+  <div class="wrap top-inner">
+    <a class="brand" href="#">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="26" height="26"><defs><linearGradient id="bg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd166"/><stop offset="1" stop-color="#ff5a3c"/></linearGradient></defs><circle cx="16" cy="19" r="7" fill="url(#bg1)"/><path d="M2 24h28" stroke="#ff8a5c" stroke-width="1.4" opacity=".75"/><path d="M5 27h22" stroke="#ff8a5c" stroke-width="1" opacity=".35"/></svg>
+      </span>
+      <span class="brand-text">霞光<span class="brand-en">SKYGLOW</span></span>
+    </a>
+    <nav class="nav">
+      <a href="#forecast" class="active">预报</a>
+      <a href="#week">七日</a>
+      <a href="#validation">验证</a>
+      <a href="#method">方法</a>
+    </nav>
+    <div class="top-meta" id="topMeta">ERA5 · CAMS · Open-Meteo</div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section id="forecast" class="query-card">
+    <div class="query-row">
+      <div class="field loc-field">
+        <label for="loc">地点</label>
+        <div class="loc-wrap">
+          <input id="loc" type="text" autocomplete="off" spellcheck="false" placeholder="城市、区县或坐标（如 上海 / 31.23,121.47）" value="上海">
+          <button class="geo-btn" id="geo" title="使用我的精确位置">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3.2M12 18.8V22M2 12h3.2M18.8 12H22"/></svg>
+          </button>
+          <div class="suggest" id="suggest" hidden></div>
+        </div>
+      </div>
+      <div class="field date-field">
+        <label for="date">日期</label>
+        <input id="date" type="date">
+      </div>
+      <div class="field mode-field">
+        <label>时段</label>
+        <div class="seg" id="mode">
+          <button data-mode="sunset" class="on">晚霞</button>
+          <button data-mode="sunrise">朝霞</button>
+        </div>
+      </div>
+      <button class="go" id="go">开始预测</button>
+    </div>
+    <div class="quick" id="quick">
+      <span>常用</span>
+      <button data-city="上海" data-lat="31.2304" data-lon="121.4737">上海</button>
+      <button data-city="北京" data-lat="39.9042" data-lon="116.4074">北京</button>
+      <button data-city="广州" data-lat="23.1291" data-lon="113.2644">广州</button>
+      <button data-city="成都" data-lat="30.5728" data-lon="104.0668">成都</button>
+      <button data-city="杭州" data-lat="30.2741" data-lon="120.1551">杭州</button>
+      <button data-city="深圳" data-lat="22.5431" data-lon="114.0579">深圳</button>
+      <button data-city="西安" data-lat="34.3416" data-lon="108.9398">西安</button>
+      <button data-city="昆明" data-lat="25.0389" data-lon="102.7183">昆明</button>
+      <button data-city="乌鲁木齐" data-lat="43.8256" data-lon="87.6168">乌鲁木齐</button>
+      <button class="coord-toggle" id="coordToggle">自定义经纬度 ▾</button>
+    </div>
+
+    <div class="coord-panel" id="coordPanel" hidden>
+      <div class="cp-field">
+        <label for="inLat">纬度（北纬 +，南纬 −）</label>
+        <input id="inLat" type="number" step="0.0001" min="-90" max="90" placeholder="31.2304" inputmode="decimal">
+        <span class="cp-unit">°N</span>
+      </div>
+      <div class="cp-field">
+        <label for="inLon">经度（东经 +，西经 −）</label>
+        <input id="inLon" type="number" step="0.0001" min="-180" max="180" placeholder="121.4737" inputmode="decimal">
+        <span class="cp-unit">°E</span>
+      </div>
+      <div class="cp-field cp-name">
+        <label for="inName">地点备注（可选）</label>
+        <input id="inName" type="text" maxlength="24" placeholder="例如：楼顶机位">
+      </div>
+      <button class="cp-go" id="coordApply">按此坐标预测</button>
+      <button class="cp-cancel" id="coordCancel">取消</button>
+      <div class="cp-hint" id="coordHint">范围：纬度 −90～90，经度 −180～180。填入后会用该点重算全部指标与地图。</div>
+    </div>
+  </section>
+
+  <section class="hero" id="hero">
+    <div class="hero-main card" id="heroMain">
+      <div class="hero-head">
+        <div>
+          <div class="eyebrow" id="heroEyebrow">晚霞 · SUNSET</div>
+          <div class="place-line"><span id="heroPlace">上海</span><span class="dot">·</span><span id="heroDate">—</span><span class="dot">·</span><span id="heroTime">—</span></div>
+          <div class="coord-line" id="heroCoord">—</div>
+          <div class="cache-line" id="cacheLine" hidden>
+            <span id="cacheText">—</span>
+            <button id="refreshNow" title="忽略本地缓存，重新向数据源请求">刷新</button>
+          </div>
+        </div>
+        <div class="conf" id="conf">置信度 —</div>
+      </div>
+
+      <div class="src-chips" id="srcChips"></div>
+
+      <div class="prob-row">
+        <div class="prob"><span id="probNum">—</span><span class="pct">%</span></div>
+        <div class="prob-side">
+          <div class="grade-chip" id="gradeChip">待计算</div>
+          <div class="prob-label">出现火烧云的概率</div>
+          <div class="prob-note" id="probNote">—</div>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat"><div class="k">最佳观赏窗口</div><div class="v" id="stWindow">—</div></div>
+        <div class="stat"><div class="k">峰值时刻</div><div class="v" id="stPeak">—</div></div>
+        <div class="stat"><div class="k">主受光云层</div><div class="v" id="stDeck">—</div></div>
+        <div class="stat"><div class="k">预计色彩</div><div class="v colour-v"><span class="sw" id="stSwatch"></span><span id="stColour">—</span></div></div>
+      </div>
+
+      <div class="reasons" id="reasons"></div>
+    </div>
+
+    <div class="sky card" id="skyCard">
+      <canvas id="sky"></canvas>
+      <div class="sky-hud">
+        <div class="sky-hud-l"><span id="skyLabel">黄昏</span><span id="skyAz">方位 —</span></div>
+        <div class="sky-hud-r"><span id="skyElev">太阳高度 —</span></div>
+      </div>
+      <div class="sky-legend" id="skyLegend"></div>
+    </div>
+  </section>
+
+  <section class="card compare-card" id="compare">
+    <div class="card-head">
+      <h2>四源对照</h2>
+      <span class="hint">同一地点、同一时刻，四种气象场各自代入同一模型</span>
+    </div>
+    <div class="table-wrap"><table class="src-table" id="srcTable"></table></div>
+    <div class="src-note" id="srcNote">上游云量沿用 Open-Meteo 采样；AOD 来自 CAMS，四个源共用。</div>
+  </section>
+
+  <section class="card chart-card">
+    <div class="card-head">
+      <h2>分时演变</h2>
+      <div class="src-switch" id="srcTimeline"></div>
+      <div class="legend">
+        <span><i class="ln ln-prob"></i>可观赏度</span>
+        <span><i class="ln ln-elev"></i>太阳高度角</span>
+        <span><i class="ln ln-win"></i>最佳窗口</span>
+      </div>
+    </div>
+    <canvas id="timeline" class="chart"></canvas>
+    <div class="src-legend" id="srcLegend"></div>
+    <div class="chart-foot" id="chartFoot">横轴为相对日落/日出时刻的分钟数。</div>
+  </section>
+
+  <section class="grid-2">
+    <div class="card">
+      <div class="card-head"><h2>成霞因子</h2><span class="hint">四源对照 · 0–100，越高越有利</span></div>
+      <div class="factors" id="factors"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>云层剖面</h2><span class="hint" id="deckSrcNote">受光高度与亮度</span></div>
+      <div class="decks" id="decks"></div>
+      <div class="risk" id="risks"></div>
+    </div>
+  </section>
+
+  <section id="geometry" class="section-block">
+    <div class="sec-head">
+      <div>
+        <div class="eyebrow">AZIMUTH &amp; GEOMETRY</div>
+        <h2>方位与几何</h2>
+      </div>
+      <div class="sec-note" id="geoNote">以观测点为中心，沿 16 个方位扫描 400 km 内的云况</div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-head"><h2>晚霞方位雷达</h2><span class="hint">越靠外，越容易在该方向看到霞光</span></div>
+        <div class="radar-wrap"><canvas id="radar"></canvas></div>
+        <div class="radar-best" id="radarBest">—</div>
+        <div class="radar-top" id="radarTop"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>几何模型</h2><div class="src-switch" id="srcGeo"></div></div>
+        <div class="geo-wrap"><svg id="geoSvg" viewBox="0 0 660 320" preserveAspectRatio="xMidYMid meet"></svg></div>
+        <div class="geo-cap" id="geoCap">—</div>
+        <canvas id="profile" class="chart small"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <section id="models" class="section-block">
+    <div class="sec-head">
+      <div>
+        <div class="eyebrow">CROSS-CHECK</div>
+        <h2>模型交叉比对</h2>
+      </div>
+      <div class="sec-note" id="modelNote">物理模型、神经网络与三家数值模式的独立结果</div>
+    </div>
+    <div class="grid-3">
+      <div class="card cross-card" id="crossPhys">
+        <div class="cc-head"><span>物理模型</span><em>PHYSICS</em></div>
+        <div class="cc-p">—</div>
+        <div class="cc-sub">—</div>
+        <div class="cc-bar"><i></i></div>
+      </div>
+      <div class="card cross-card" id="crossNN">
+        <div class="cc-head"><span>神经网络</span><em>MLP</em></div>
+        <div class="cc-p">—</div>
+        <div class="cc-sub">—</div>
+        <div class="cc-bar"><i></i></div>
+      </div>
+      <div class="card cross-card" id="crossEns">
+        <div class="cc-head"><span>多模式集合</span><em>ENSEMBLE</em></div>
+        <div class="ens-rows" id="ensRows"><div class="empty">—</div></div>
+      </div>
+    </div>
+    <div class="card agree-card" id="agreeCard">—</div>
+  </section>
+
+  <section id="week" class="card week-card">
+    <div class="card-head">
+      <h2>未来七日</h2>
+      <span class="hint" id="weekHint">按日落时刻计算 · 点击切换日期</span>
+    </div>
+    <div class="week-grid" id="weekGrid"><div class="empty">加载中…</div></div>
+  </section>
+
+  <section id="datasrc" class="card src-panel">
+    <div class="src-panel-head">
+      <div>
+        <h2>数据源直连</h2>
+        <p>Open-Meteo 取数失败时，可自动改从 ECMWF / GFS / ICON 官方档案直接下载 GRIB2 解码。直连只取最近格点，无上游环带。</p>
+      </div>
+      <label class="sw auto-sw"><input type="checkbox" id="dirAuto"><span></span>
+        <em>失败时自动直连</em></label>
+    </div>
+    <div class="dir-grid" id="dirGrid"></div>
+    <div class="dir-note" id="dirNote">—</div>
+
+    <div class="dir-note">调用地址固定为 Open-Meteo 官方端点（api / archive / air-quality）。
+      配额按 IP 统计，不存在可绕开的独立额度，故不提供中转设置。</div>
+  </section>
+
+  <section id="weatherapi" class="card src-panel">
+    <div class="src-panel-head">
+      <div>
+        <h2>WeatherAPI（主校验源）</h2>
+        <p>提供<b>总云量、能见度、湿度、降水、降水概率、露点、天气现象</b>。无分层云量与 AOD，因此不参与概率打分，而是承担两件事：把四源诊断结果与独立观测对照，以及在 Open-Meteo 缺测时补齐能见度/湿度/降水。</p>
+      </div>
+      <span class="qw-badge" id="waBadge">检查中</span>
+    </div>
+    <div class="qw-grid" id="waKeyRow" hidden>
+      <div class="qw-field"><label for="waKey">WeatherAPI Key（需自行申请）</label>
+        <input id="waKey" type="password" spellcheck="false" placeholder="在 weatherapi.com 免费注册后粘贴到这里"></div>
+      <div class="qw-field"><label for="waCap">每日调用上限</label>
+        <input id="waCap" type="number" min="10" max="100000" step="50" value="2000"></div>
+      <button id="waSave">保存</button>
+      <button id="waTest" class="ghost">测试</button>
+    </div>
+    <div class="qw-usage" id="waUsage">—</div>
+    <div class="qw-note" id="waNote">本项目<b>不内置任何密钥</b>。到 <a href="https://www.weatherapi.com/signup.aspx" target="_blank" rel="noopener">weatherapi.com</a> 免费注册即可获得 Key（100 万次/月），填入上方保存，或用环境变量 <code>WEATHERAPI_KEY</code>。未配置时预测照常工作，只是少了校验与缺测补位。</div>
+  </section>
+
+  <section id="qweather" class="card src-panel">
+    <div class="src-panel-head">
+      <div>
+        <h2>和风天气<span class="opt-tag">可选</span></h2>
+        <p>仅提供<b>总云量</b>、能见度、湿度、降水，无分层云量、无气溶胶光学厚度。<b>默认不启用</b>——仅在 WeatherAPI 不可用时接手校验与缺测补位。需要请自行填写 Host 与密钥。</p>
+      </div>
+      <span class="qw-badge" id="qwBadge">未配置</span>
+    </div>
+    <div class="qw-mode" id="qwMode">
+      <button data-mode="jwt" class="on">JWT（Ed25519）</button>
+      <button data-mode="key">API Key</button>
+    </div>
+    <div class="qw-grid" id="qwJwt">
+      <div class="qw-field"><label for="qwHost">API Host</label>
+        <input id="qwHost" type="text" spellcheck="false" placeholder="xxx.qweatherapi.com"></div>
+      <div class="qw-field"><label for="qwKid">凭据 ID（kid）</label>
+        <input id="qwKid" type="text" spellcheck="false" placeholder="控制台 › 项目管理 › 凭据 ID"></div>
+      <div class="qw-field"><label for="qwIss">开发者 ID（iss）</label>
+        <input id="qwIss" type="text" spellcheck="false" placeholder="Q 开头 10 位"></div>
+      <div class="qw-field"><label for="qwSub">项目 ID（sub）</label>
+        <input id="qwSub" type="text" spellcheck="false" placeholder="控制台 › 项目管理"></div>
+      <div class="qw-field"><label for="qwCap">每日调用上限</label>
+        <input id="qwCap" type="number" min="10" max="5000" step="10" value="800"></div>
+      <button id="qwSave">保存</button>
+      <button id="qwTest" class="ghost">测试</button>
+    </div>
+    <div class="qw-grid" id="qwKeyRow" hidden>
+      <div class="qw-field"><label for="qwKey">API Key</label>
+        <input id="qwKey" type="password" spellcheck="false" placeholder="控制台创建的 API KEY"></div>
+      <button id="qwSaveKey">保存</button>
+    </div>
+    <div class="qw-keyfile" id="qwKeyFile">私钥：未找到 · 将 ed25519 私钥保存为 <code>skyglow/qweather-private.pem</code></div>
+    <div class="qw-usage" id="qwUsage">—</div>
+    <div class="qw-note">免费额度：天气和基础服务每月前 <b>5 万次</b>。同一地点的朝霞与晚霞共用 <b>1 次</b>调用并按日缓存，正常使用每天约 12 次/地点。太阳辐射接口按 0.3 元/次计费，<b>未接入</b>。</div>
+    <div class="qw-usage" id="qwWhere">数据去向：总云量仅用于交叉校验对照；能见度在 Open-Meteo 缺测时补入颜色纯度计算（标记 vis_from=qweather）；不参与概率打分，也不拆分分层云量。</div>
+  </section>
+
+  <section id="maps" class="section-block">
+    <div class="sec-head">
+      <div>
+        <div class="eyebrow">GLOW MAP</div>
+        <h2>晚霞地图</h2>
+      </div>
+      <div class="src-switch" id="srcMap"></div>
+      <div class="sec-note" id="mapNote">两张地图均按需生成，日常查询只取目标地点 · 颜色越亮表示概率越高</div>
+    </div>
+
+    <div class="card map-card" id="natCard">
+      <div class="map-head">
+        <h3>全国</h3>
+        <span class="hint" id="mapNatMeta">默认不生成，避免消耗大量配额</span>
+        <button class="gen-btn" id="genNational">生成全国图</button>
+        <div class="map-legend">
+          <span>0%</span><i class="legend-bar"></i><span>100%</span>
+        </div>
+      </div>
+      <div class="map-wrap collapsed" id="wrapNational">
+        <canvas id="mapNational"></canvas>
+        <div class="map-state" id="stateNational">尚未生成</div>
+        <div class="map-tip" id="tipNational" hidden></div>
+      </div>
+      <div class="map-foot" id="natFoot">全国图约消耗 600 个格点配额，首次生成约 40–60 秒；同一日期只需生成一次，之后切换数据源不再请求。</div>
+    </div>
+
+    <div class="card map-card">
+      <div class="map-head">
+        <h3>城市精细</h3>
+        <span class="hint" id="mapLocalMeta">默认不生成</span>
+        <button class="gen-btn" id="genLocal">生成城市图</button>
+      </div>
+      <div class="map-wrap collapsed" id="wrapLocal">
+        <canvas id="mapLocal"></canvas>
+        <div class="map-state" id="stateLocal">尚未生成</div>
+        <div class="map-tip" id="tipLocal" hidden></div>
+      </div>
+      <div class="map-foot" id="localFoot">城市图约消耗 169 个格点配额，覆盖目标点周边 ±1.5°（约 330 km），首次约 15–25 秒。</div>
+    </div>
+  </section>
+
+  <section id="validation" class="section-block">
+    <div class="sec-head">
+      <div>
+        <div class="eyebrow">VALIDATION</div>
+        <h2>回测验证</h2>
+      </div>
+      <div class="sec-note" id="valNote">—</div>
+    </div>
+
+    <div class="metrics" id="valMetrics"></div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-head"><h2>混淆矩阵</h2><span class="hint">5 折交叉验证 · 行为实测，列为预测</span></div>
+        <div class="matrix" id="matrix"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>概率校准</h2><span class="hint">预测概率 vs 实际出现频率</span></div>
+        <canvas id="reliability" class="chart small"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>与 sunsetbot 同期预报对比</h2><span class="hint">同一测试集、同一标签</span></div>
+      <div class="table-wrap"><table class="cmp" id="cmpTable"></table></div>
+    </div>
+
+    <div class="grid-3" id="caseWrap"></div>
+  </section>
+
+  <section id="method" class="section-block">
+    <div class="sec-head">
+      <div>
+        <div class="eyebrow">METHOD &amp; DATA</div>
+        <h2>预测逻辑与数据来源</h2>
+      </div>
+    </div>
+
+    <div class="grid-2 method-grid">
+      <div class="card prose">
+        <h3>1 · 太阳几何</h3>
+        <p>用 NOAA 太阳位置算法计算当地日出日落时刻、方位角与太阳高度角（误差约 0.02°）。云底在太阳下沉到一定角度后进入地球阴影，受光极限为</p>
+        <pre>α_min = −√(2h / R)</pre>
+        <p>h 为云底高度，R 为地球半径。9 km 的卷云约在 −3.0° 失去直射光，1.5 km 的低云约在 −1.2°，这是"高云烧得久、低云烧得短"的几何根源。</p>
+
+        <h3>2 · 光路与光谱</h3>
+        <p>低太阳高度下光线沿地球切线传播，切点高度</p>
+        <pre>h_t = h − R·α² / 2</pre>
+        <p>沿该路径积分瑞利散射与气溶胶米散射的光学厚度，得到 400–700 nm 透射谱，再由 CIE 1931 配色函数转 sRGB，直接给出预计的霞光颜色与亮度。上层云受光路径短，保留更多短波，呈金黄；低云路径长、消光强，只剩暗红。</p>
+
+        <h3>3 · 云幕、遮挡与通透度</h3>
+        <p>高云/中云云量决定"可被染色的幕布"面积，低云主要起遮挡作用。沿太阳方位角在 120/250/380 km 三个环带取样 24 个点，按方位与距离加权，得到<b>光路上游</b>的低云遮挡与中云消光。气溶胶光学厚度（AOD）与相对湿度共同决定颜色纯度。</p>
+
+        <h3>4 · 概率标定</h3>
+        <p>上述物理量取 logit 后进入岭回归，输出 0–5 的强度潜变量，再用累积 logistic 标定为"出现火烧云"的概率与六档等级。标定参数由 2022–2023 上海 1109 条人工观测定级记录拟合，按日期分组做五折交叉验证，另留出 2023 下半年做时间切分检验。</p>
+
+        <h3>5 · 对参考项目的取舍</h3>
+        <p>本产品只借用公开资料中的物理内核（受光几何、大气消光、云属判据），实现上刻意避开三类做法：</p>
+        <ul class="limits">
+          <li>不用"总云量单一阈值"打分：无法区分高云与低云，也无法处理太阳方向的光路遮挡；</li>
+          <li>不做"多源任一达标即报警"的并集策略：会系统性抬高空报率，对拍摄决策有害；</li>
+          <li>不把 sunsetbot 的预测值当作特征或标签：那是循环论证。回测只使用它的<b>实测质量</b>列作为标签。</li>
+        </ul>
+        <p>相对地，本产品把"光路上游"显式建模：沿太阳方位在 120 / 250 / 380 km 三个环带取 24 个样本点，按方位与距离加权，而不是只看天顶一个格点。</p>
+      </div>
+
+      <div class="card prose">
+        <h3>数据来源</h3>
+        <table class="src">
+          <tr><th>变量</th><th>来源</th><th>分辨率</th></tr>
+          <tr><td>分层云量（低/中/高）</td><td>ERA5 再分析 · Open-Meteo Archive；实时用 Open-Meteo Forecast</td><td>0.25° / 1 h</td></tr>
+          <tr><td>气溶胶光学厚度 AOD(550nm)</td><td>CAMS 全球大气组分 · Open-Meteo Air Quality</td><td>0.4° / 1 h</td></tr>
+          <tr><td>相对湿度、露点、降水</td><td>ERA5 / Open-Meteo</td><td>0.25° / 1 h</td></tr>
+          <tr><td>边界层高度</td><td>ERA5（用于估计低云云底）</td><td>0.25° / 1 h</td></tr>
+          <tr><td>能见度</td><td>Open-Meteo 预报；历史缺测时由 AOD+RH 反演</td><td>1 h</td></tr>
+          <tr><td>地名解析</td><td>Open-Meteo Geocoding</td><td>—</td></tr>
+          <tr><td>交叉校验（可选）</td><td>WeatherAPI.com 总云量/能见度</td><td>1 h</td></tr>
+          <tr><td>历史实测定级</td><td>sunsetbot.top 再分析记录（上海，2022-06 至 2023-12）</td><td>逐日</td></tr>
+        </table>
+        <p class="fine">所有接口均为免费公开服务，无需密钥。WeatherAPI.com 需自行申请免费 Key 并设置环境变量 <code>WEATHERAPI_KEY</code>；因其仅提供总云量、无分层云量与 AOD，故只用于一致性校验，不参与主评分。</p>
+
+        <h3>已知局限</h3>
+        <ul class="limits">
+          <li>模式网格 0.25°（约 25 km）会平滑掉云缝与云边界，局地"云洞漏光"无法解析。</li>
+          <li>云的光学厚度不可得，只能用分层云量近似，厚卷层云与薄卷云被同等对待。</li>
+          <li>气溶胶垂直廓线未知，等效消光高度存在 ±1 km 量级不确定性。</li>
+          <li>回测标签来自上海单点人工观测，存在观测者主观差异与漏记；跨气候区迁移时阈值需重新标定。</li>
+          <li>15 天以外的日期不提供预报；历史日期使用 ERA5 再分析，属"事后最优估计"，精度高于当时的业务预报。</li>
+        </ul>
+
+        <h3>参考</h3>
+        <ul class="refs">
+          <li>sunsetbot.top《火烧云定量预报速成》第一–四章（几何模型、光谱消光、云属判据）</li>
+          <li>NOAA Global Monitoring Laboratory, Solar Calculator</li>
+          <li>Wyman, Sloan &amp; Shirley (2013), <i>Simple Analytic Approximations to the CIE XYZ Color Matching Functions</i></li>
+          <li>Hersbach et al. (2020), ERA5 global reanalysis, QJRMS</li>
+          <li>Inness et al. (2019), CAMS reanalysis, ACP</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <div>霞光 Skyglow · 开源火烧云概率预报</div>
+    <div id="footMeta">数据：ERA5 / CAMS / Open-Meteo · 标签：sunsetbot 再分析记录</div>
+  </footer>
+</main>
+
+<div class="toast" id="toast" hidden></div>
+<div class="loading" id="loading" hidden><div class="spin"></div><span>正在读取气象场…</span></div>
+
+<script src="/app.js"></script>
+<script src="/maps.js"></script>
+<script src="/analysis.js"></script>
+</body>
+</html>

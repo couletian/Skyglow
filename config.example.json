@@ -1,0 +1,23 @@
+{
+  "_comment": "复制为 config.local.json 后填写；该文件已被 .gitignore 排除，不会外传。留空则使用程序内置的 WeatherAPI 密钥，和风天气保持关闭。",
+  "weatherapi_key": "",
+  "weatherapi_cap": 2000,
+  "direct": {
+    "auto": true,
+    "sources": {
+      "ecmwf": true,
+      "gfs": true,
+      "icon": false
+    }
+  },
+  "qweather": {
+    "host": "",
+    "auth": "jwt",
+    "kid": "",
+    "iss": "",
+    "sub": "",
+    "key": "",
+    "private_key": "",
+    "daily_cap": 800
+  }
+}

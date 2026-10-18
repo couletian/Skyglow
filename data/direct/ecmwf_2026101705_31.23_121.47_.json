@@ -1,0 +1,1 @@
+{"cc_low": 0.2, "cc_mid": 0.0, "cc_high": 0.0, "run": "2026-10-17T18+00:00", "step": 0, "grid": "1440x721", "transport": "GRIB2 range via data.ecmwf.int", "diagnosed": true, "rh": {"300": 19.4, "850": 79.4, "500": 36.0}, "tcc": 0.2}
