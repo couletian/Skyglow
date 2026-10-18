@@ -5,6 +5,11 @@
 > 若需启用可选的数据源，请复制 `config.example.json` 为 `config.local.json` 后填写你自己的凭据。
 
 一款可本地运行的朝霞/晚霞（火烧云）定量预报网页产品。基于免费的 ERA5 再分析、CAMS 大气组分与 Open-Meteo 预报接口，计算太阳—云层几何、大气光谱消光与光路上游云遮挡，输出 0–100% 的出现概率、六档强度、最佳观赏窗口与预计色彩，并提供**全国晚霞地图**与**城市精细地图**。
+<img width="1163" height="508" alt="image" src="https://github.com/user-attachments/assets/2c92edda-8af4-4824-9876-d4ce9cfb0bd1" />
+<img width="892" height="662" alt="image" src="https://github.com/user-attachments/assets/21dfab73-36ed-4242-965c-0846fbd217f1" />
+<img width="1037" height="668" alt="image" src="https://github.com/user-attachments/assets/10ffc175-ddfe-4c6d-a942-016e5506db04" />
+<img width="1051" height="686" alt="image" src="https://github.com/user-attachments/assets/623d9c19-0587-40ec-b8c3-3a8b28349e1d" />
+<img width="1032" height="495" alt="image" src="https://github.com/user-attachments/assets/0760fa9a-29d0-4f36-bd00-606798f75ff2" />
 
 支持三种选点方式，位置精度保留到小数点后 4 位（约 10 m 量级），预报本身受 0.25° 模式网格限制：
 
