@@ -1,0 +1,1972 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>霞光 Skyglow · 火烧云概率预报（单文件版）</title>
+<meta name="description" content="朝霞/晚霞定量预报：四源分层云量、太阳几何、光谱消光，纯浏览器运行，双击即可使用。">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PGNpcmNsZSBjeD0iMTYiIGN5PSIxOSIgcj0iOCIgZmlsbD0iI2ZmN2E0ZCIvPjxwYXRoIGQ9Ik0yIDI1aDI4IiBzdHJva2U9IiNmZmIwNzAiIHN0cm9rZS13aWR0aD0iMiIvPjwvc3ZnPg==">
+<style>
+:root{
+  --bg:#0a0c12; --bg2:#0e1118; --card:#12161f; --card2:#161b26;
+  --line:rgba(255,255,255,.07); --line2:rgba(255,255,255,.12);
+  --text:#eceff5; --muted:#9aa3b3; --muted2:#6d7688;
+  --accent:#ff8a4c; --accent2:#ff5a3c;
+  --mono:"SF Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:radial-gradient(1200px 600px at 50% -10%,#1b1622 0%,#0a0c12 55%) no-repeat,var(--bg);
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px}
+
+/* header */
+.top{padding:26px 0 18px}
+.top-inner{display:flex;align-items:center;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit}
+.brand-mark{display:grid;place-items:center}
+.brand-text{font-size:17px;font-weight:600;letter-spacing:.02em}
+.brand-en{font-size:10px;color:var(--muted2);letter-spacing:.22em;margin-left:8px;font-family:var(--mono)}
+.badge{margin-left:auto;font-size:10.5px;color:var(--muted2);font-family:var(--mono);
+  border:1px solid var(--line2);border-radius:999px;padding:3px 10px}
+
+/* query */
+.query-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px;margin-bottom:16px}
+.query-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:10.5px;color:var(--muted2);letter-spacing:.05em}
+.field input{height:38px;padding:0 12px;border-radius:10px;border:1px solid var(--line2);
+  background:rgba(8,10,15,.72);color:var(--text);font-size:13.5px;font-family:inherit;outline:none}
+.field input:focus{border-color:rgba(255,138,76,.5)}
+.loc-field{flex:1 1 320px;min-width:260px;position:relative}
+.loc-wrap{position:relative;display:flex;gap:8px}
+.loc-wrap input{flex:1}
+.geo-btn{width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;border-radius:10px;
+  border:1px solid var(--line2);background:rgba(255,255,255,.04);color:var(--muted);cursor:pointer}
+.geo-btn:hover{color:var(--text);border-color:var(--line2)}
+.date-field input{width:150px}
+.seg{display:inline-flex;gap:3px;background:rgba(8,10,15,.72);border:1px solid var(--line2);
+  border-radius:10px;padding:3px;height:38px;align-items:center}
+.seg button{border:0;background:none;color:var(--muted2);font-size:12px;padding:5px 14px;
+  border-radius:7px;cursor:pointer;font-family:inherit;height:30px}
+.seg button.on{background:rgba(255,255,255,.10);color:var(--text)}
+.go{height:38px;padding:0 22px;border:0;border-radius:10px;cursor:pointer;font-family:inherit;
+  background:linear-gradient(180deg,#ff9a5e,#ff6a3d);color:#1a0c06;font-weight:600;font-size:13px}
+.go:disabled{opacity:.55;cursor:default}
+.go.dirty{box-shadow:0 0 0 2px rgba(255,138,76,.38),0 6px 18px rgba(255,106,61,.25)}
+.suggest{position:absolute;top:100%;left:0;right:0;margin-top:6px;z-index:40;
+  background:#161b26;border:1px solid var(--line2);border-radius:12px;overflow:hidden;
+  box-shadow:0 18px 40px rgba(0,0,0,.55)}
+.suggest button{display:flex;gap:10px;align-items:center;width:100%;text-align:left;padding:9px 12px;
+  border:0;background:none;color:var(--text);font-family:inherit;font-size:13px;cursor:pointer}
+.suggest button:hover{background:rgba(255,255,255,.06)}
+.suggest .s-admin{font-size:11px;color:var(--muted2)}
+.suggest .s-coord{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--muted2)}
+
+.quick{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.quick span{font-size:10.5px;color:var(--muted2)}
+.quick button{font-size:11.5px;padding:5px 11px;border-radius:8px;cursor:pointer;font-family:inherit;
+  border:1px solid var(--line2);background:rgba(255,255,255,.03);color:var(--muted)}
+.quick button:hover{color:var(--text);border-color:rgba(255,255,255,.2)}
+.quick button.coord-toggle{border-style:dashed;color:var(--accent);border-color:rgba(255,138,76,.35)}
+
+.coord-panel{display:grid;grid-template-columns:1fr 1fr 1fr auto auto;gap:10px;align-items:end;
+  margin-top:12px;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,138,76,.22);
+  background:rgba(255,138,76,.045)}
+.cp-field{position:relative}
+.cp-field label{display:block;font-size:10.5px;color:var(--muted2);margin-bottom:5px}
+.cp-field input{width:100%;height:36px;padding:0 34px 0 11px;border-radius:9px;border:1px solid var(--line2);
+  background:rgba(8,10,15,.72);color:var(--text);font-size:13px;font-family:var(--mono);outline:none}
+.cp-field.cp-name input{padding-right:11px;font-family:inherit}
+.cp-unit{position:absolute;right:10px;bottom:10px;font-size:10.5px;color:var(--muted2);font-family:var(--mono)}
+.cp-go{height:36px;padding:0 18px;border:0;border-radius:9px;cursor:pointer;font-family:inherit;
+  background:linear-gradient(180deg,#ff9a5e,#ff6a3d);color:#1a0c06;font-weight:600;font-size:12.5px;white-space:nowrap}
+.cp-cancel{height:36px;padding:0 14px;border-radius:9px;cursor:pointer;font-family:inherit;
+  background:rgba(255,255,255,.05);border:1px solid var(--line2);color:var(--muted);font-size:12px}
+.cp-hint{grid-column:1/-1;font-size:10.5px;color:var(--muted2);margin-top:-2px}
+.cp-hint.err{color:#f0b0aa}
+
+/* hero */
+.hero{display:grid;grid-template-columns:1.35fr 1fr;gap:16px;margin-bottom:16px}
+.hero-main{position:relative;overflow:hidden}
+.hero-main::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(420px 220px at 88% 12%,rgba(255,138,76,.16),transparent 70%)}
+.eyebrow{font-size:10.5px;letter-spacing:.16em;color:var(--accent);font-family:var(--mono)}
+.place-line{font-size:15px;margin-top:6px;font-weight:600;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.place-line .dot{color:var(--muted2);font-weight:400}
+.coord-line{font-size:11px;color:var(--muted2);font-family:var(--mono);margin-top:2px}
+.big{display:flex;align-items:flex-end;gap:14px;margin:18px 0 6px}
+.pct{font-size:58px;line-height:1;font-weight:250;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.pct small{font-size:22px;color:var(--muted2);margin-left:2px;font-weight:400}
+.grade{font-size:15px;font-weight:600;padding-bottom:8px}
+.grade .sub{display:block;font-size:11px;color:var(--muted2);font-weight:400;margin-top:2px}
+.swatch{width:52px;height:52px;border-radius:14px;border:1px solid rgba(255,255,255,.14);
+  margin-left:auto;align-self:center;box-shadow:0 8px 26px rgba(0,0,0,.4)}
+.meta-row{display:flex;gap:22px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.meta-item .k{font-size:10px;color:var(--muted2);letter-spacing:.05em}
+.meta-item .v{font-size:14px;margin-top:1px;font-variant-numeric:tabular-nums}
+
+.side h3{margin:0 0 10px;font-size:11px;letter-spacing:.08em;color:var(--muted2);font-weight:500}
+.src-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.045)}
+.src-row:last-child{border-bottom:0}
+.src-row i{width:8px;height:8px;border-radius:2px;flex:0 0 8px}
+.src-row .nm{font-size:12.5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.src-row .bar{width:74px;height:5px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;flex:0 0 74px}
+.src-row .bar span{display:block;height:100%;border-radius:3px}
+.src-row .pv{font-family:var(--mono);font-size:11.5px;width:46px;text-align:right;flex:0 0 46px}
+.src-row .pv.err{color:#e08c86;font-size:10px}
+
+/* panels */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.panel-h{display:flex;align-items:baseline;gap:10px;margin-bottom:14px}
+.panel-h h2{margin:0;font-size:13px;font-weight:600;letter-spacing:.02em}
+.panel-h .sp{font-size:10.5px;color:var(--muted2);margin-left:auto;font-family:var(--mono)}
+
+.deck{display:grid;grid-template-columns:52px 1fr 78px;gap:10px;align-items:center;padding:8px 0;
+  border-bottom:1px solid rgba(255,255,255,.045)}
+.deck:last-child{border-bottom:0}
+.deck .dn{font-size:12px;color:var(--muted)}
+.deck .dbar{height:8px;border-radius:4px;background:rgba(255,255,255,.07);overflow:hidden;position:relative}
+.deck .dbar span{display:block;height:100%;border-radius:4px}
+.deck .dv{text-align:right;font-family:var(--mono);font-size:11px;color:var(--muted2)}
+
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{font-size:11.5px;padding:5px 10px;border-radius:999px;border:1px solid var(--line2);
+  color:var(--muted);background:rgba(255,255,255,.03)}
+.chip.pos{border-color:rgba(120,200,150,.35);color:#a9e8c8;background:rgba(120,200,150,.08)}
+.chip.warn{border-color:rgba(230,180,100,.35);color:#f0d3a0;background:rgba(230,180,100,.08)}
+.chip.neg{border-color:rgba(224,120,110,.35);color:#f0b0aa;background:rgba(224,120,110,.08)}
+
+canvas{display:block;width:100%}
+.tl-wrap{position:relative;height:190px}
+.win{margin-top:12px;display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.win b{color:var(--text);font-weight:600}
+
+/* week */
+.week{display:grid;grid-template-columns:repeat(8,1fr);gap:8px}
+.wday{background:rgba(255,255,255,.025);border:1px solid var(--line);border-radius:11px;
+  padding:10px 6px;text-align:center;cursor:pointer;transition:border-color .15s}
+.wday:hover{border-color:var(--line2)}
+.wday.on{border-color:rgba(255,138,76,.55);background:rgba(255,138,76,.07)}
+.wday .wd{font-size:10.5px;color:var(--muted2)}
+.wday .wn{font-size:10px;color:var(--muted2);font-family:var(--mono);margin-top:1px}
+.wday .wp{font-size:17px;margin:5px 0 3px;font-variant-numeric:tabular-nums}
+.wday .wp small{font-size:10px;color:var(--muted2)}
+.wday .wb{height:4px;border-radius:2px;background:rgba(255,255,255,.08);overflow:hidden;margin:0 4px}
+.wday .wb i{display:block;height:100%;border-radius:2px}
+.wday .wl{font-size:9.5px;color:var(--muted2);margin-top:4px;height:12px}
+
+/* radar */
+.radar-wrap{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:center}
+.radar-box{position:relative;aspect-ratio:1;max-width:330px;margin:0 auto}
+.dirlist{display:flex;flex-direction:column;gap:5px}
+.dirline{display:flex;align-items:center;gap:9px;font-size:11.5px}
+.dirline .nm{width:52px;color:var(--muted2);flex:0 0 52px}
+.dirline .b{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.07);overflow:hidden}
+.dirline .b i{display:block;height:100%;border-radius:3px}
+.dirline .v{width:34px;text-align:right;font-family:var(--mono);color:var(--muted)}
+
+/* misc */
+.empty{padding:26px;text-align:center;color:var(--muted2);font-size:12px}
+.fine{font-size:11px;color:var(--muted2);line-height:1.7}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:99;
+  background:#20262f;border:1px solid var(--line2);color:var(--text);font-size:12.5px;
+  padding:9px 16px;border-radius:10px;box-shadow:0 12px 34px rgba(0,0,0,.5);
+  opacity:0;transition:opacity .18s,transform .18s;pointer-events:none;max-width:80vw}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(-4px)}
+.spin{display:inline-block;width:12px;height:12px;border-radius:50%;
+  border:2px solid rgba(255,255,255,.15);border-top-color:var(--accent);
+  animation:sp .8s linear infinite;vertical-align:-2px;margin-right:7px}
+@keyframes sp{to{transform:rotate(360deg)}}
+footer{padding:26px 0 40px;color:var(--muted2);font-size:11px;line-height:1.8}
+footer a{color:var(--muted);text-decoration:none;border-bottom:1px solid var(--line2)}
+
+/* settings */
+.setrow{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.setrow input{height:34px;padding:0 11px;border-radius:9px;border:1px solid var(--line2);
+  background:rgba(8,10,15,.72);color:var(--text);font-size:12px;font-family:var(--mono);outline:none;flex:1;min-width:200px}
+.setrow button{height:34px;padding:0 15px;border-radius:9px;cursor:pointer;font-family:inherit;font-size:12px;
+  border:1px solid var(--line2);background:rgba(255,255,255,.05);color:var(--muted)}
+.setrow button:hover{color:var(--text)}
+
+@media (max-width:980px){
+  .hero{grid-template-columns:1fr}
+  .grid2{grid-template-columns:1fr}
+  .radar-wrap{grid-template-columns:1fr}
+  .week{grid-template-columns:repeat(4,1fr)}
+  .coord-panel{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap top-inner">
+  <a class="brand" href="#">
+    <span class="brand-mark">
+      <svg viewBox="0 0 32 32" width="26" height="26"><defs><linearGradient id="bg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd166"/><stop offset="1" stop-color="#ff5a3c"/></linearGradient></defs><circle cx="16" cy="19" r="7" fill="url(#bg1)"/><path d="M2 24h28" stroke="#ff8a5c" stroke-width="1.4" opacity=".75"/><path d="M5 27h22" stroke="#ff8a5c" stroke-width="1" opacity=".35"/></svg>
+    </span>
+    <span class="brand-text">霞光<span class="brand-en">SKYGLOW</span></span>
+  </a>
+  <span class="badge">单文件版 · 纯浏览器运行</span>
+</div></header>
+
+<main class="wrap">
+
+  <section class="query-card">
+    <div class="query-row">
+      <div class="field loc-field">
+        <label for="loc">地点</label>
+        <div class="loc-wrap">
+          <input id="loc" type="text" autocomplete="off" spellcheck="false"
+                 placeholder="城市、区县，或直接输入 31.23,121.47" value="上海">
+          <button class="geo-btn" id="geo" title="使用我的位置">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3.2M12 18.8V22M2 12h3.2M18.8 12H22"/></svg>
+          </button>
+        </div>
+        <div class="suggest" id="suggest" hidden></div>
+      </div>
+      <div class="field date-field">
+        <label for="date">日期</label>
+        <input id="date" type="date">
+      </div>
+      <div class="field">
+        <label>时段</label>
+        <div class="seg" id="mode">
+          <button data-mode="sunset" class="on">晚霞</button>
+          <button data-mode="sunrise">朝霞</button>
+        </div>
+      </div>
+      <button class="go" id="go">开始预测</button>
+    </div>
+
+    <div class="quick" id="quick">
+      <span>常用</span>
+      <button data-city="上海" data-lat="31.2304" data-lon="121.4737">上海</button>
+      <button data-city="北京" data-lat="39.9042" data-lon="116.4074">北京</button>
+      <button data-city="广州" data-lat="23.1291" data-lon="113.2644">广州</button>
+      <button data-city="成都" data-lat="30.5728" data-lon="104.0668">成都</button>
+      <button data-city="杭州" data-lat="30.2741" data-lon="120.1551">杭州</button>
+      <button data-city="深圳" data-lat="22.5431" data-lon="114.0579">深圳</button>
+      <button data-city="西安" data-lat="34.3416" data-lon="108.9398">西安</button>
+      <button data-city="昆明" data-lat="25.0389" data-lon="102.7183">昆明</button>
+      <button data-city="乌鲁木齐" data-lat="43.8256" data-lon="87.6168">乌鲁木齐</button>
+      <button class="coord-toggle" id="coordToggle">自定义经纬度 ▾</button>
+    </div>
+
+    <div class="coord-panel" id="coordPanel" hidden>
+      <div class="cp-field">
+        <label for="inLat">纬度（南纬为负）</label>
+        <input id="inLat" type="number" step="0.0001" min="-90" max="90" placeholder="31.2304" inputmode="decimal">
+        <span class="cp-unit">°N</span>
+      </div>
+      <div class="cp-field">
+        <label for="inLon">经度（西经为负）</label>
+        <input id="inLon" type="number" step="0.0001" min="-180" max="180" placeholder="121.4737" inputmode="decimal">
+        <span class="cp-unit">°E</span>
+      </div>
+      <div class="cp-field cp-name">
+        <label for="inName">备注（可选）</label>
+        <input id="inName" type="text" maxlength="24" placeholder="例如：楼顶机位">
+      </div>
+      <button class="cp-go" id="coordApply">按此坐标预测</button>
+      <button class="cp-cancel" id="coordCancel">取消</button>
+      <div class="cp-hint" id="coordHint">范围：纬度 −90～90，经度 −180～180</div>
+    </div>
+  </section>
+
+  <section class="hero">
+    <div class="card hero-main" id="heroMain">
+      <div class="eyebrow" id="heroEyebrow">晚霞 · SUNSET</div>
+      <div class="place-line"><span id="heroPlace">—</span><span class="dot">·</span><span id="heroDate">—</span><span class="dot">·</span><span id="heroTime">—</span></div>
+      <div class="coord-line" id="heroCoord">—</div>
+      <div class="big">
+        <div class="pct" id="heroPct">—<small>%</small></div>
+        <div class="grade" id="heroGrade">—</div>
+        <div class="swatch" id="heroSwatch"></div>
+      </div>
+      <div class="meta-row" id="heroMeta"></div>
+    </div>
+
+    <div class="card side">
+      <h3>四源对比</h3>
+      <div id="srcList"><div class="empty">选择地点与日期后，点击「开始预测」获取结果</div></div>
+    </div>
+  </section>
+
+  <section class="grid2">
+    <div class="card">
+      <div class="panel-h"><h2>云层分解</h2><span class="sp" id="deckSp">—</span></div>
+      <div id="deckList"><div class="empty">—</div></div>
+    </div>
+    <div class="card">
+      <div class="panel-h"><h2>判断依据</h2><span class="sp" id="reasonSp">—</span></div>
+      <div class="chips" id="chips"><span class="chip">—</span></div>
+    </div>
+  </section>
+
+  <section class="card" style="margin-bottom:16px">
+    <div class="panel-h"><h2>时间窗口</h2><span class="sp" id="tlSp">相对日落/日出时刻（分钟）</span></div>
+    <div class="tl-wrap"><canvas id="tl" height="190"></canvas></div>
+    <div class="win" id="winRow"></div>
+  </section>
+
+  <section class="card" style="margin-bottom:16px">
+    <div class="panel-h"><h2>方位分布</h2><span class="sp" id="radarSp">—</span></div>
+    <div class="radar-wrap">
+      <div class="radar-box"><canvas id="radar"></canvas></div>
+      <div class="dirlist" id="dirList"><div class="empty">—</div></div>
+    </div>
+  </section>
+
+  <section class="card" style="margin-bottom:16px">
+    <div class="panel-h"><h2>未来七日</h2><span class="sp" id="weekSp">按当前时段</span></div>
+    <div class="week" id="weekGrid"><div class="empty">—</div></div>
+  </section>
+
+  <section class="card" style="margin-bottom:16px">
+    <div class="panel-h"><h2>可选校验源</h2><span class="sp" id="waSp">未配置</span></div>
+    <div class="setrow">
+      <input id="waKey" type="password" spellcheck="false" placeholder="WeatherAPI Key（可选，仅存本机）">
+      <button id="waSave">保存</button>
+      <button id="waClear">清除</button>
+    </div>
+    <p class="fine" style="margin:10px 0 0">在 <a href="https://www.weatherapi.com/signup.aspx" target="_blank" rel="noopener">weatherapi.com</a> 免费注册可得 Key（100 万次/月）。配好后会把总云量、能见度、湿度、降水概率与主诊断对照，并在 Open-Meteo 缺测时补齐。密钥只存在你本机的 localStorage，不会上传任何服务器。</p>
+  </section>
+
+  <footer>
+    <div>数据：Open-Meteo（ECMWF IFS / GFS / ICON）· 模型 ridge-v2.1 · 神经网络 mlp-15-8-4-1</div>
+    <div>本文件为单文件离线版：双击即可运行，无需服务器。首次取数约 2–6 秒，之后走本地缓存 30 分钟。</div>
+    <div id="footNote">概率为条件估计，非确定性预报；强烈对流、沙尘、局地地形遮挡不在模式考虑范围内。</div>
+  </footer>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ==========================================================================
+   模型参数（与 data/model.json、data/nn_model.json 完全一致）
+   ridge-v2.1 / mlp-15-8-4-1
+   ========================================================================== */
+const MODEL = {"version": "ridge-v2.1", "features": ["canvas", "canvas_high", "light", "horizon", "purity", "aod", "precip"], "mean": [0.552198, 0.161255, -2.367422, 2.797181, 0.592216, 0.440482, 0.102795], "std": [3.094128, 4.104055, 1.6832, 2.09135, 1.012109, 0.334673, 0.303691], "coef": [0.209356, 0.170426, 0.134162, 0.291155, 0.054547, -0.108413, -0.142713], "intercept": 0.563571, "prob_a": 2.661556, "prob_b": 1.384075, "thresholds": [1.1911, 1.2018, 1.2429, 1.3468, 1.4465], "prob_cuts": [0.08, 0.16, 0.26, 0.38, 0.52], "metrics": {}};
+const NN = {"version": "mlp-15-8-4-1", "features": ["cc_low", "cc_mid", "cc_high", "cc_low_up", "cc_mid_up", "rh", "blh", "sun_elev", "canvas", "canvas_high", "light", "horizon", "purity", "aod", "precip"], "mean": [22.717403065825074, 27.192605951307453, 40.976645626690704, 24.840216411181203, 28.789810640216427, 81.37051397655553, 385.00360685302076, -0.8320018034265244, 0.5927031559963934, 0.4501440036068546, 0.18757664562669063, 0.8335014427412077, 0.6203092876465275, 0.4404824165915237, 0.12844183949504057], "std": [35.67374574341661, 39.196516740504464, 44.39289585162846, 27.44271854308941, 31.209714084806905, 12.983839779033186, 283.5218672704708, 0.00400135193487339, 0.40530082725816613, 0.4363822180472008, 0.11841628160237004, 0.26341073150028366, 0.18635031660786955, 0.33467257447752613, 0.6249995069420211], "W": [[[-0.023549420262680917, -0.023715385981124243, -0.023908811895165426, 0.023890557759622583, 0.02350274631453298, 0.02386453994703232, 0.023638026990044348, -0.023578423222776233], [0.00530682782327335, 0.0049968676993742975, 0.004675840534280305, -0.004709486526121114, -0.005388367368834, -0.004761831806637811, -0.005151702147234622, 0.005247273945168215], [0.032050324872273675, 0.03180980248945947, 0.03151620680307529, -0.03152670319964536, -0.03212596371011923, -0.03156483809375613, -0.03190925582591158, 0.03198841329883697], [-0.0731293377051187, -0.0731308513406957, -0.07318299691940633, 0.07318938821141466, 0.07312297039049043, 0.07318549077191348, 0.07314943188634286, -0.07313981027326767], [-0.18765155843552928, -0.18780842675104345, -0.1881196600146185, 0.18812665616665103, 0.18759329862884075, 0.18809759341035245, 0.18778430295948884, -0.18771244448862567], [0.02207037397948263, 0.02245207619770308, 0.02290236858501822, -0.022870028005082102, -0.021951640042694516, -0.022809415517435958, -0.02227575228017431, 0.022151616723234666], [-0.02782483981416886, -0.027970009323476385, -0.028173780755796716, 0.028159082114459444, 0.02777947946370308, 0.028136673855747907, 0.027911323587978085, -0.027860447260512202], [0.002424030107739445, 0.002558857905322461, 0.0027140335069749956, -0.002704475819275865, -0.0023849831270370274, -0.0026841278958184746, -0.0024966209151512575, 0.002447490310925394], [0.1400178773614049, 0.13991019404530688, 0.13985367438291751, -0.13987966171276325, -0.14004387801917456, -0.13989139954195884, -0.13998930728909414, 0.14001692825050582], [0.022167120443670234, 0.022065675017248258, 0.021932049100135145, -0.02194236209015228, -0.022196564824647796, -0.021957849150323273, -0.02210877936657452, 0.022145324204100442], [0.19103348516788207, 0.19150425421336256, 0.1922184294886344, -0.1921937023958585, -0.1908834560597996, -0.19210702891237777, -0.19134284133106375, 0.19115794093613717], [0.08449363511017564, 0.08456652133055911, 0.08469922112607807, -0.08470074225148369, -0.08446629864288796, -0.08468815839952397, -0.08454965123693166, 0.08451893973120249], [0.08608153237505223, 0.08598700364063416, 0.08593725428474908, -0.08595624277441279, -0.08610108553073664, -0.08596633585586494, -0.08605268247974437, 0.08607375823221479], [-0.020118651099117865, -0.020100975487901723, -0.020110140381092226, 0.02011547060074089, 0.020121712889641916, 0.020115164227697616, 0.020119238144802508, -0.02012076020461019], [-0.056408622707184546, -0.05647996969522347, -0.05659011121351562, 0.05658770615073618, 0.056386568456290635, 0.056575787721127334, 0.05645751908840031, -0.05643023300287083]], [[-0.18459249044463258, 0.18470029375182653, -0.18467588727143514, -0.184710847278619], [-0.18473912313514504, 0.18484954784226348, -0.18479489264031304, -0.18486546428897188], [-0.1850192882264017, 0.1851371877228141, -0.18511247698012673, -0.1851591419716118], [0.18503792538624486, -0.1851387022717212, 0.185114322324701, 0.18516164538003624], [0.18453348976610395, -0.18464791243600334, 0.18461947990429714, 0.18466602444702815], [0.18500920875353447, -0.18511184000184613, 0.18508647552723803, 0.18513362994435928], [0.1847168921658989, -0.184820093584436, 0.18479439540578937, 0.18484906816175473], [-0.18465044865811842, 0.1847566616723861, -0.18472574851857718, -0.18477934344753658]], [[-0.5986992361332694], [0.5990788144421255], [-0.5989700004246724], [-0.5991683343265612]]], "B": [[-0.01979284733848443, -0.017610863350681304, -0.015440994248454647, 0.015716175807573514, 0.02037508149855854, 0.016001582955958087, 0.018753595221232374, -0.019400910892652008], [0.04853656094760442, -0.04159562752505099, 0.043047831634184505, 0.04049666257747992], [-1.8909183460651051]]};
+
+/* Skyglow core algorithms — direct port of core/solar.py, spectrum.py, model.py, nn.py.
+   Verified against the Python implementation by tools/verify_port.py. */
+
+const R_EARTH = 6371.0088;
+const REFRACTION = -0.833;
+
+/* ---------------- solar.py ---------------- */
+function julian(ms) { return ms / 86400000.0 + 2440587.5; }
+
+function solarPosition(lat, lon, ms) {
+  const jd = julian(ms);
+  const T = (jd - 2451545.0) / 36525.0;
+  const L0 = ((280.46646 + 36000.76983 * T + 0.0003032 * T * T) % 360.0 + 360.0) % 360.0;
+  const M = 357.52911 + 35999.05029 * T - 0.0001537 * T * T;
+  const e = 0.016708634 - 0.000042037 * T - 0.0000001267 * T * T;
+  const Mr = M * Math.PI / 180;
+  const C = ((1.914602 - 0.004817 * T - 0.000014 * T * T) * Math.sin(Mr)
+    + (0.019993 - 0.000101 * T) * Math.sin(2 * Mr)
+    + 0.000289 * Math.sin(3 * Mr));
+  const trueLong = L0 + C;
+  const omega = 125.04 - 1934.136 * T;
+  const lam = trueLong - 0.00569 - 0.00478 * Math.sin(omega * Math.PI / 180);
+  const eps0 = 23.0 + (26.0 + (21.448 - 46.815 * T - 0.00059 * T * T + 0.001813 * T ** 3) / 60.0) / 60.0;
+  const eps = eps0 + 0.00256 * Math.cos(omega * Math.PI / 180);
+  const decl = Math.asin(Math.sin(eps * Math.PI / 180) * Math.sin(lam * Math.PI / 180));
+  const y = Math.tan(eps * Math.PI / 360.0) ** 2;
+  const L0r = L0 * Math.PI / 180;
+  const eqtime = 4.0 * (180 / Math.PI) * (
+    y * Math.sin(2 * L0r) - 2.0 * e * Math.sin(Mr)
+    + 4.0 * e * y * Math.sin(Mr) * Math.cos(2 * L0r)
+    - 0.5 * y * y * Math.sin(4 * L0r) - 1.25 * e * e * Math.sin(2 * Mr));
+
+  const d = new Date(ms);
+  const utcMin = d.getUTCHours() * 60.0 + d.getUTCMinutes() + d.getUTCSeconds() / 60.0;
+  const tst = ((utcMin + eqtime + 4.0 * lon) % 1440.0 + 1440.0) % 1440.0;
+  const ha = tst / 4.0 - 180.0;
+
+  const latr = lat * Math.PI / 180;
+  const har = ha * Math.PI / 180;
+  let cosz = Math.sin(latr) * Math.sin(decl) + Math.cos(latr) * Math.cos(decl) * Math.cos(har);
+  cosz = Math.max(-1.0, Math.min(1.0, cosz));
+  const zen = Math.acos(cosz) * 180 / Math.PI;
+  const elev = 90.0 - zen;
+
+  const sinz = Math.sin(zen * Math.PI / 180);
+  let az;
+  if (sinz < 1e-9) {
+    az = 0.0;
+  } else {
+    let v = (Math.cos(latr) * Math.sin(decl)
+      - Math.sin(latr) * Math.cos(decl) * Math.cos(har)) / Math.max(1e-9, Math.cos(elev * Math.PI / 180));
+    v = Math.max(-1.0, Math.min(1.0, v));
+    az = Math.acos(v) * 180 / Math.PI;
+    if (ha > 0) az = (360.0 - az) % 360.0;
+  }
+  return [elev, az];
+}
+
+/* Local civil date at a fixed UTC offset -> epoch ms of local midnight. */
+function localMidnightMs(y, m, day, offsetHours) {
+  return Date.UTC(y, m - 1, day, 0, 0, 0) - offsetHours * 3600000;
+}
+
+function findCrossing(lat, lon, startMs, hoursSpan, rising, stepMin) {
+  let prevT = startMs;
+  let prevE = solarPosition(lat, lon, prevT)[0];
+  const n = Math.floor(hoursSpan * 60 / stepMin);
+  for (let i = 1; i <= n; i++) {
+    const t = startMs + i * stepMin * 60000;
+    const e = solarPosition(lat, lon, t)[0];
+    const crossed = rising ? (prevE < REFRACTION && REFRACTION <= e)
+      : (prevE >= REFRACTION && REFRACTION > e);
+    if (crossed) {
+      let lo = prevT, hi = t;
+      for (let k = 0; k < 18; k++) {
+        const mid = lo + (hi - lo) / 2;
+        const em = solarPosition(lat, lon, mid)[0];
+        if ((em < REFRACTION) === rising) lo = mid; else hi = mid;
+      }
+      return lo + (hi - lo) / 2;
+    }
+    prevT = t; prevE = e;
+  }
+  return null;
+}
+
+function eventTimes(lat, lon, y, m, day, offsetHours, stepMin = 2, which = null) {
+  const start = localMidnightMs(y, m, day, offsetHours);
+  return {
+    sunrise: which === "sunset" ? null : findCrossing(lat, lon, start, 24.0, true, stepMin),
+    sunset: which === "sunrise" ? null : findCrossing(lat, lon, start, 24.0, false, stepMin),
+  };
+}
+
+function illuminationLimit(cloudBaseKm) {
+  if (cloudBaseKm <= 0) return 0.0;
+  return -(180 / Math.PI) * Math.sqrt(2.0 * cloudBaseKm / R_EARTH);
+}
+
+/* ---------------- spectrum.py ---------------- */
+const RAYLEIGH_TAU_550 = 0.098;
+const AEROSOL_ANGSTROM = 1.3;
+const AEROSOL_SCALE_HEIGHT = 1.4;
+const RAYLEIGH_SCALE_HEIGHT = 7.5;
+const AEROSOL_AIRMASS_GAIN = 12.0;
+const SUN_TEMP = 5778.0;
+
+function planck(lamNm, temp = SUN_TEMP) {
+  const lam = lamNm * 1e-9;
+  const h = 6.62607015e-34, c = 2.99792458e8, k = 1.380649e-23;
+  return (2 * h * c * c / lam ** 5) / (Math.exp(h * c / (lam * k * temp)) - 1);
+}
+
+function gauss(x, mu, s1, s2) {
+  const s = x < mu ? s1 : s2;
+  return Math.exp(-0.5 * ((x - mu) / s) ** 2);
+}
+
+function cieXyz(lam) {
+  const x = 1.056 * gauss(lam, 599.8, 37.9, 31.0)
+    + 0.362 * gauss(lam, 442.0, 16.0, 26.7)
+    - 0.065 * gauss(lam, 501.1, 20.4, 26.2);
+  const y = 0.821 * gauss(lam, 568.8, 46.9, 40.5)
+    + 0.286 * gauss(lam, 530.9, 16.3, 31.1);
+  const z = 1.217 * gauss(lam, 437.0, 11.8, 36.0)
+    + 0.681 * gauss(lam, 459.0, 26.0, 13.8);
+  return [x, y, z];
+}
+
+const LAMBDAS = Array.from({ length: 61 }, (_, i) => 400 + 5 * i);
+const CMF = LAMBDAS.map(l => cieXyz(l));
+const PLANCK_N = LAMBDAS.map(l => planck(l));
+const MAXP = Math.max(...PLANCK_N);
+
+function xyzToLinearRgb(x, y, z) {
+  return [3.2406 * x - 1.5372 * y - 0.4986 * z,
+    -0.9689 * x + 1.8758 * y + 0.0415 * z,
+    0.0557 * x - 0.2040 * y + 1.0570 * z];
+}
+
+function gamma(c) {
+  c = Math.max(0.0, Math.min(1.0, c));
+  return c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+}
+
+function airmass(sunElev, cloudBaseKm) {
+  const tangentRay = 38.0 * Math.exp(-cloudBaseKm / RAYLEIGH_SCALE_HEIGHT);
+  const tangentAer = AEROSOL_AIRMASS_GAIN * Math.exp(-cloudBaseKm / AEROSOL_SCALE_HEIGHT);
+  if (sunElev >= 0) {
+    const s = Math.max(Math.sin(sunElev * Math.PI / 180), 0.005);
+    return [Math.min(tangentRay, 1.0 / s), Math.min(tangentAer, 0.75 / s), cloudBaseKm];
+  }
+  const alpha = -sunElev * Math.PI / 180;
+  const hT = Math.max(0.0, cloudBaseKm - R_EARTH * alpha * alpha / 2.0);
+  return [38.0 * Math.exp(-hT / RAYLEIGH_SCALE_HEIGHT),
+    AEROSOL_AIRMASS_GAIN * Math.exp(-hT / AEROSOL_SCALE_HEIGHT), hT];
+}
+
+function deckLight(cloudBaseKm, sunElev, aod) {
+  let mRay, mAer, hT;
+  if (sunElev >= -0.05 && cloudBaseKm <= 0.05) {
+    [mRay, mAer, hT] = airmass(Math.max(sunElev, 0.0), 0.001);
+  } else {
+    [mRay, mAer, hT] = airmass(sunElev, cloudBaseKm);
+  }
+  aod = Math.max(0.0, aod == null ? 0.15 : aod);
+
+  let X = 0, Y = 0, Z = 0, Xw = 0, Yw = 0, Zw = 0;
+  let t470 = 1.0, t620 = 1.0, tau550 = 0.0;
+  for (let i = 0; i < LAMBDAS.length; i++) {
+    const lam = LAMBDAS[i];
+    const tau = RAYLEIGH_TAU_550 * Math.pow(550.0 / lam, 4.1) * mRay
+      + aod * Math.pow(550.0 / lam, AEROSOL_ANGSTROM) * mAer;
+    const T = Math.exp(-tau);
+    const base = PLANCK_N[i] / MAXP;
+    const spec = base * T;
+    const [cx, cy, cz] = CMF[i];
+    X += spec * cx; Y += spec * cy; Z += spec * cz;
+    Xw += base * cx; Yw += base * cy; Zw += base * cz;
+    if (lam === 550) tau550 = tau;
+    if (lam === 470) t470 = T;
+    if (lam === 620) t620 = T;
+  }
+
+  const lum = Y / Math.max(Yw, 1e-9);
+  if (lum <= 1e-9) {
+    return { lum: 0.0, rgb: [120, 90, 80], redness: 1.0, tau550, tangent_km: hT, m_ray: mRay, m_aer: mAer };
+  }
+  const denom = Math.max(X + Y + Z, 1e-12);
+  const cx = X / denom, cy = Y / denom;
+  const Yn = Math.max(lum, 1e-6);
+  const Xn = cx / Math.max(cy, 1e-6) * Yn;
+  const Zn = (1.0 - cx - cy) / Math.max(cy, 1e-6) * Yn;
+  let [r, g, b] = xyzToLinearRgb(Xn, Yn, Zn);
+  r = Math.max(0, r); g = Math.max(0, g); b = Math.max(0, b);
+  const mx = Math.max(r, g, b, 1e-9);
+  r /= mx; g /= mx; b /= mx;
+  const shade = 0.55 + 0.45 * Math.min(1.0, Math.pow(lum / 0.25, 0.35));
+  const rgb = [r, g, b].map(c => Math.round(255 * gamma(c) * shade));
+  return { lum, rgb, redness: t620 / Math.max(t470, 1e-9), tau550, tangent_km: hT, m_ray: mRay, m_aer: mAer };
+}
+
+function colourName(rgb, lum) {
+  if (lum < 0.004) return "暗红余晖";
+  const [r, g, b] = rgb;
+  if (r > 200 && g > 150 && b < 120) return "金黄";
+  if (r > 210 && g > 110) return "橘黄";
+  if (r > 190 && g > 60) return "橘红";
+  if (r > 150 && b < 110) return "绯红";
+  return "玫瑰红";
+}
+
+/* ---------------- model.py ---------------- */
+const GRADES = ["基本不烧", "微烧", "小烧", "小到中烧", "中到大烧", "大烧"];
+const GRADE_COLORS = ["#5b6477", "#8a6f5a", "#b5764a", "#d4823c", "#e8603c", "#f2402f"];
+
+const DECKS = [
+  { key: "high", label: "高云", base: 8.6, thickness: 1.6, w: 1.00 },
+  { key: "mid", label: "中云", base: 5.2, thickness: 1.2, w: 0.95 },
+  { key: "low", label: "低云", base: null, thickness: 0.8, w: 0.45 },
+];
+
+const DEFAULT_MODEL = {
+  version: "physics-v1",
+  features: ["canvas", "canvas_high", "light", "horizon", "purity", "aod", "precip"],
+  mean: [0, 0, 0, 0, 0, 0, 0],
+  std: [1, 1, 1, 1, 1, 1, 1],
+  coef: [0.15, 0.30, 0.10, 0.25, 0.10, -0.06, -0.15],
+  intercept: -0.55,
+  prob_a: 1.55, prob_b: 0.75,
+  thresholds: [0.9, 1.6, 2.3, 3.0, 3.8],
+  prob_cuts: [0.08, 0.16, 0.26, 0.38, 0.52],
+};
+
+function sigmoid(x) {
+  if (x < -60) return 0.0;
+  if (x > 60) return 1.0;
+  return 1.0 / (1.0 + Math.exp(-x));
+}
+const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
+function logit(p, eps = 0.012) {
+  p = clamp(p, eps, 1 - eps);
+  return Math.log(p / (1 - p));
+}
+const round = (v, n) => {
+  const f = Math.pow(10, n);
+  return Math.round(v * f) / f;
+};
+
+function deckBases(w) {
+  const blh = w.blh || 0;
+  return { low: blh ? clamp(blh / 1000.0, 0.45, 2.2) : 1.2, mid: 5.2, high: 8.6 };
+}
+
+function canvasCurve(key, cover) {
+  const u = clamp(cover / 100.0, 0, 1);
+  if (key === "high") return 1.0 - Math.exp(-3.1 * u);
+  if (key === "mid") {
+    let c = 1.0 - Math.exp(-3.7 * u);
+    if (u > 0.94) c *= 0.86;
+    return c;
+  }
+  return 0.52 * (1.0 - Math.exp(-1.5 * u));
+}
+
+function featuresFromWeather(w, sunElev) {
+  const bases = deckBases(w);
+  const aod = clamp(w.aod == null ? 0.15 : w.aod, 0.02, 1.2);
+  const aodUp = clamp(w.aod_up == null ? aod : w.aod_up, 0.02, 1.5);
+
+  const decks = DECKS.map(d => {
+    const baseKm = bases[d.key];
+    const cover = w["cc_" + d.key] || 0.0;
+    const effH = baseKm + 0.45 * d.thickness;
+    const limit = illuminationLimit(effH);
+    const gate = 1.0 / (1.0 + Math.exp(-(sunElev - limit) / 0.7));
+    const canvas = canvasCurve(d.key, cover) * d.w * gate;
+    const light = deckLight(effH, sunElev, d.key === "low" ? aod : aodUp);
+    return {
+      key: d.key, label: d.label, cover, base_km: baseKm, canvas,
+      lit: sunElev >= limit, light, weight: d.w, limit,
+    };
+  });
+
+  const totalW = decks.reduce((s, x) => s + x.canvas, 0);
+  let canvas, lightVal, rgb;
+  if (totalW > 1e-6) {
+    canvas = 1.0 - decks.reduce((p, x) => p * (1.0 - x.canvas), 1.0);
+    lightVal = decks.reduce((s, x) => s + x.canvas * x.light.lum, 0) / totalW;
+    rgb = [0, 1, 2].map(i => decks.reduce((s, x) => s + x.canvas * x.light.rgb[i], 0) / totalW);
+  } else {
+    canvas = 0.0; lightVal = 0.0; rgb = [108, 96, 92];
+  }
+
+  const lowUp = clamp((w.cc_low_up != null ? w.cc_low_up : (w.cc_low || 0)) / 100.0, 0, 1);
+  const midUp = clamp((w.cc_mid_up != null ? w.cc_mid_up : (w.cc_mid || 0)) / 100.0, 0, 1);
+  let horizon = 1.0 - 0.85 * sigmoid((lowUp - 0.62) / 0.10);
+  horizon *= 1.0 - 0.25 * sigmoid((midUp - 0.85) / 0.08);
+  horizon *= 1.0 - 0.30 * sigmoid((clamp((w.cc_low || 0) / 100.0, 0, 1) - 0.80) / 0.08);
+  horizon = clamp(horizon, 0.05, 1.0);
+
+  const rh = w.rh == null ? 60.0 : w.rh;
+  let visKm;
+  if (w.vis == null) {
+    const growth = Math.pow(1.0 - clamp(rh, 5, 99) / 100.0, -0.55);
+    const bExt = aod / 1.4 * growth + 0.012;
+    visKm = clamp(3.912 / bExt, 1.0, 80.0);
+  } else {
+    visKm = w.vis / 1000.0;
+  }
+
+  const precip = w.precip || 0.0;
+  let purity = (0.62 + 0.38 * sigmoid((visKm - 12) / 4.0))
+    * (1.0 - 0.28 * sigmoid((rh - 92) / 4.0));
+  if (precip >= 0.05) purity *= precip < 0.6 ? 0.55 : 0.28;
+  purity = clamp(purity, 0.05, 1.0);
+
+  return {
+    canvas: clamp(canvas, 0, 0.999),
+    canvas_high: clamp(decks[0].canvas, 0, 0.999),
+    canvas_mid: clamp(decks[1].canvas, 0, 0.999),
+    canvas_low: clamp(decks[2].canvas, 0, 0.999),
+    light: clamp(lightVal, 0, 1),
+    horizon, purity, aod, precip,
+    rgb: rgb.map(c => Math.round(c)),
+    decks, bases, low_up: lowUp, mid_up: midUp,
+  };
+}
+
+function rawFeatures(f) {
+  return [logit(f.canvas), logit((f.canvas_high || 0) * 1.6),
+    Math.log(Math.max(f.light, 0.004)), logit(f.horizon), logit(f.purity),
+    f.aod, f.precip >= 0.2 ? 1.0 : 0.0];
+}
+
+function intensityOf(f, model) {
+  const x = rawFeatures(f);
+  let z = model.intercept;
+  for (let i = 0; i < x.length; i++) {
+    z += model.coef[i] * (x[i] - model.mean[i]) / (model.std[i] || 1.0);
+  }
+  return z;
+}
+const probabilityOf = (idx, model) => sigmoid(model.prob_a * (idx - model.prob_b));
+
+function gradeFromIndex(idx, model) {
+  let g = 0;
+  model.thresholds.forEach((th, i) => { if (idx >= th) g = i + 1; });
+  return g;
+}
+
+function assess(w, sunElev, event, model) {
+  const f = featuresFromWeather(w, sunElev);
+  const idx = clamp(intensityOf(f, model), -1.0, 6.5);
+  const p = probabilityOf(idx, model);
+  const g = gradeFromIndex(idx, model);
+  const lum = f.light, rgb = f.rgb;
+  const hex = "#" + rgb.map(c => c.toString(16).padStart(2, "0")).join("");
+  return {
+    probability: round(p, 4), index: round(idx, 3),
+    grade: g, grade_label: GRADES[g], grade_color: GRADE_COLORS[g],
+    colour: { rgb, hex, name: colourName(rgb, lum), luminance: round(lum, 4) },
+    features: {
+      canvas: round(f.canvas, 4), light: round(lum, 4), horizon: round(f.horizon, 4),
+      purity: round(f.purity, 4), aod: round(f.aod, 3), precip: round(f.precip, 2),
+    },
+    decks: f.decks.map(d => ({
+      key: d.key, label: d.label, cover: round(d.cover, 1), base_km: round(d.base_km, 2),
+      canvas: round(d.canvas, 3), lit: d.lit, luminance: round(d.light.lum, 4),
+      rgb: d.light.rgb, tangent_km: round(d.light.tangent_km, 2),
+    })),
+    event, sun_elev: round(sunElev, 3), model_version: model.version,
+  };
+}
+
+function contrast(elev) { return 1.0 / (1.0 + Math.exp((elev - 0.6) / 1.5)); }
+
+function timeline(w, eventMs, lat, lon, model, before = 35, after = 55, step = 1) {
+  const ref = contrast(solarPosition(lat, lon, eventMs)[0]);
+  const out = [];
+  for (let m = -before; m <= after; m += step) {
+    const t = eventMs + m * 60000;
+    const [elev, az] = solarPosition(lat, lon, t);
+    const r = assess(w, elev, "sunset", model);
+    const shape = Math.min(1.0, contrast(elev) / Math.max(ref, 0.25));
+    out.push({
+      minute: m, time: new Date(t).toISOString(), elev: round(elev, 3), az: round(az, 1),
+      probability: r.probability, view: round(Math.min(1.0, r.probability * shape), 4),
+      grade: r.grade, luminance: r.features.light, rgb: r.colour.rgb,
+    });
+  }
+  return out;
+}
+
+function bestWindow(tl) {
+  if (!tl || !tl.length) return null;
+  const pk = Math.max(...tl.map(x => x.view));
+  if (pk < 0.08) return null;
+  const thr = Math.max(0.10, pk * 0.45);
+  let best = [], cur = [];
+  for (const x of tl) {
+    if (x.view >= thr && x.luminance > 0.012 && x.elev < 4.5) cur.push(x);
+    else { if (cur.length > best.length) best = cur; cur = []; }
+  }
+  if (cur.length > best.length) best = cur;
+  if (!best.length) return null;
+  const peak = best.reduce((a, b) => (b.view > a.view ? b : a));
+  return {
+    start_min: best[0].minute, end_min: best[best.length - 1].minute,
+    peak_min: peak.minute,
+    peak_probability: round(Math.max(...best.map(x => x.view)), 3),
+    start: best[0].time, end: best[best.length - 1].time, duration: best.length,
+  };
+}
+
+/* ---------------- nn.py ---------------- */
+function nnPredict(feats, m) {
+  if (!m || !m.W) return null;
+  let h = feats.map((v, i) => (v - m.mean[i]) / (m.std[i] || 1.0));
+  for (let i = 0; i < m.W.length; i++) {
+    const Wi = m.W[i], Bi = m.B[i];
+    const out = [];
+    for (let k = 0; k < Wi[0].length; k++) {
+      let s = Bi[k];
+      for (let j = 0; j < h.length; j++) s += h[j] * Wi[j][k];
+      out.push(s);
+    }
+    h = i < m.W.length - 1 ? out.map(v => Math.tanh(v)) : out;
+  }
+  const logitV = Math.max(-30.0, Math.min(30.0, h[0]));
+  return 1.0 / (1.0 + Math.exp(-logitV));
+}
+
+</script>
+
+<script>
+/* ============================================================================
+   Skyglow 单文件版 —— 取数层 / 编排层 / 渲染层
+   取值与配色和 Python 版一致；核心算法见上方 core 段（已逐值校验）。
+   ========================================================================== */
+(function () {
+"use strict";
+
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const pad2 = n => String(n).padStart(2, "0");
+
+/* ---------------- endpoints & constants ---------------- */
+const OM_FORECAST = "https://api.open-meteo.com/v1/forecast";
+const OM_ARCHIVE = "https://archive-api.open-meteo.com/v1/archive";
+const OM_AIR = "https://air-quality-api.open-meteo.com/v1/air-quality";
+const OM_GEO = "https://geocoding-api.open-meteo.com/v1/search";
+const WA_API = "https://api.weatherapi.com/v1/forecast.json";
+
+const SOURCES = [
+  { id: "openmeteo", label: "Open-Meteo", short: "OM", color: "#ff8a4c",
+    tokens: ["best_match", "archive_best_match", ""] },
+  { id: "ecmwf", label: "ECMWF IFS", short: "IFS", color: "#6f8fb8", tokens: ["ecmwf_ifs025"] },
+  { id: "gfs", label: "GFS", short: "GFS", color: "#5ad19a", tokens: ["gfs_seamless"] },
+  { id: "icon", label: "ICON", short: "ICON", color: "#c58ad6", tokens: ["icon_seamless"] },
+];
+const MODELS_PARAM = "best_match,ecmwf_ifs025,gfs_seamless,icon_seamless";
+/* Open-Meteo 的配额按「格点数 × 变量数 × 天数」加权，浏览器没有服务端缓存兜底，
+   所以只取模型真正读取的 7 个变量（露点/风/降水概率不参与打分）。 */
+const VARS = "cloud_cover_low,cloud_cover_mid,cloud_cover_high,visibility,"
+  + "relative_humidity_2m,precipitation,boundary_layer_height";
+const AZ_VARS = "cloud_cover_low,cloud_cover_mid,cloud_cover_high,boundary_layer_height";
+
+const RINGS = [120, 250, 380];
+const AZIMUTHS = [0, 45, 90, 135, 180, 225, 270, 315];
+const AZ_DISTANCES = [60, 140, 240, 380];
+const AZ_TRANSECT = [40, 80, 120, 160, 200, 240, 280, 320, 360, 400, 450, 500, 550];
+const DIR_NAMES = ["北", "北东北", "东北", "东东北", "东", "东东南", "东南", "南东南",
+  "南", "南西南", "西南", "西西南", "西", "西西北", "西北", "北西北"];
+
+const state = { lat: 31.2304, lon: 121.4737, name: "上海", date: null, mode: "sunset",
+  data: null, waKey: null, week: null, radar: null, busy: false };
+
+/* ---------------- storage cache ---------------- */
+const CACHE_TTL = 30 * 60 * 1000;
+
+function cacheGet(key) {
+  try {
+    const raw = localStorage.getItem("skyglow:" + key);
+    if (!raw) return null;
+    const o = JSON.parse(raw);
+    if (Date.now() - o.t > (o.ttl || CACHE_TTL)) return null;
+    return o.v;
+  } catch (e) { return null; }
+}
+function cachePut(key, v, ttl) {
+  try { localStorage.setItem("skyglow:" + key, JSON.stringify({ t: Date.now(), v, ttl: ttl || CACHE_TTL })); }
+  catch (e) { /* quota */ }
+}
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* The browser has no server-side circuit breaker, so retry 429s with backoff.
+   Open-Meteo counts one request as N locations; a 25-point bundle is heavy. */
+async function getJSON(url, ttl, tries) {
+  const hit = cacheGet(url);
+  if (hit) return hit;
+  const max = tries || 3;
+  let last = "";
+  for (let k = 0; k < max; k++) {
+    let res;
+    try {
+      res = await fetch(url);
+    } catch (e) {
+      last = "网络不可达";
+      if (k < max - 1) { await sleep(1200 * (k + 1)); continue; }
+      throw new Error(last);
+    }
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.error) throw new Error(data.reason || "上游返回错误");
+      cachePut(url, data, ttl);
+      return data;
+    }
+    if (res.status === 429) {
+      last = "Open-Meteo 限流（429）：同一 IP 每分钟请求过多";
+      if (k < max - 1) { await sleep(4000 * (k + 1)); continue; }
+    } else if (res.status >= 500) {
+      last = "上游暂时不可用（HTTP " + res.status + "）";
+      if (k < max - 1) { await sleep(2000 * (k + 1)); continue; }
+    } else {
+      throw new Error("HTTP " + res.status);
+    }
+  }
+  throw new Error(last);
+}
+
+/* ---------------- time helpers ---------------- */
+function dateInOffset(ms, offsetSec) {
+  const d = new Date(ms + offsetSec * 1000);
+  return { y: d.getUTCFullYear(), m: d.getUTCMonth() + 1, d: d.getUTCDate(),
+    hh: d.getUTCHours(), mm: d.getUTCMinutes(), wd: d.getUTCDay() };
+}
+const isoDate = o => o.y + "-" + pad2(o.m) + "-" + pad2(o.d);
+function hhmmLocal(ms, offsetSec) {
+  const o = dateInOffset(ms, offsetSec);
+  return pad2(o.hh) + ":" + pad2(o.mm);
+}
+function parseLocalMs(s) {          // "2026-10-18T00:00" treated as wall clock
+  return Date.parse(s + "Z");
+}
+function hhmmWall(wallMs) {         // wall-clock ms -> "HH:MM"
+  const d = new Date(wallMs);
+  return pad2(d.getUTCHours()) + ":" + pad2(d.getUTCMinutes());
+}
+
+/* ---------------- Open-Meteo sampling ---------------- */
+function samplePoints(lat, lon) {
+  const pts = [{ id: "c", lat, lon, dist: 0, az: 0 }];
+  for (const d of RINGS) {
+    for (const az of AZIMUTHS) {
+      const dlat = (d / 111.32) * Math.cos(az * Math.PI / 180);
+      const dlon = (d / (111.32 * Math.cos(lat * Math.PI / 180))) * Math.sin(az * Math.PI / 180);
+      pts.push({ id: d + "-" + az, lat: lat + dlat, lon: lon + dlon, dist: d, az });
+    }
+  }
+  return pts;
+}
+
+function seriesFor(h, varName, tokens) {
+  for (const t of tokens) {
+    const key = varName + (t ? "_" + t : "");
+    if (h[key] && h[key].length) return h[key];
+  }
+  return null;
+}
+
+function batchUrl(base, pts, start, end, hourly, models) {
+  const lats = pts.map(p => p.lat.toFixed(4)).join(",");
+  const lons = pts.map(p => p.lon.toFixed(4)).join(",");
+  return base + "?latitude=" + lats + "&longitude=" + lons
+    + "&start_date=" + start + "&end_date=" + end
+    + "&hourly=" + hourly
+    + (models ? "&models=" + MODELS_PARAM : "")
+    + "&timezone=auto";
+}
+
+async function fetchBundle(lat, lon, start, end, archive, ptsIn) {
+  const pts = ptsIn || samplePoints(lat, lon);
+  const url = batchUrl(archive ? OM_ARCHIVE : OM_FORECAST, pts, start, end, VARS, true);
+  let data = await getJSON(url, CACHE_TTL);
+  if (!Array.isArray(data)) data = [data];
+  if (data.length !== pts.length) throw new Error("格点返回数量不匹配");
+
+  let aq = null;
+  try {
+    const aqUrl = batchUrl(OM_AIR, pts, start, end, "aerosol_optical_depth", false);
+    aq = await getJSON(aqUrl, CACHE_TTL);
+    if (!Array.isArray(aq)) aq = [aq];
+  } catch (e) { aq = null; }
+
+  const offset = data[0].utc_offset_seconds || 0;
+  return {
+    offset,
+    tz: data[0].timezone,
+    elevation: data[0].elevation,
+    points: pts.map((p, i) => {
+      const h = data[i].hourly || {};
+      const rec = { id: p.id, dist: p.dist, az: p.az, time: h.time || [], sources: {} };
+      for (const s of SOURCES) {
+        const toks = s.tokens;
+        rec.sources[s.id] = {
+          cc_low: seriesFor(h, "cloud_cover_low", toks),
+          cc_mid: seriesFor(h, "cloud_cover_mid", toks),
+          cc_high: seriesFor(h, "cloud_cover_high", toks),
+          // 只与上面 VARS 的 7 项对应；其余变量已不请求
+          rh: seriesFor(h, "relative_humidity_2m", toks),
+          precip: seriesFor(h, "precipitation", toks),
+          blh: seriesFor(h, "boundary_layer_height", toks),
+          vis: seriesFor(h, "visibility", toks),
+        };
+      }
+      rec.aod = (aq && aq[i] && aq[i].hourly && aq[i].hourly.aerosol_optical_depth) || [];
+      return rec;
+    }),
+  };
+}
+
+/* Interpolate a series that starts at times[0], at a local wall-clock instant. */
+function interp(series, times, localMs) {
+  if (!series || !series.length || !times || !times.length) return null;
+  const delta = (localMs - parseLocalMs(times[0])) / 3600000;
+  const i = Math.floor(delta);
+  const f = delta - i;
+  if (i < 0 || i + 1 >= series.length) return series[Math.max(0, Math.min(i, series.length - 1))];
+  const a = series[i], b = series[i + 1];
+  if (a == null) return b;
+  if (b == null) return a;
+  return a * (1 - f) + b * f;
+}
+
+function sourceAvailable(centre, sid, localMs) {
+  const s = centre.sources[sid] || {};
+  let got = 0;
+  for (const k of ["cc_low", "cc_mid", "cc_high"]) {
+    if (interp(s[k], centre.time, localMs) != null) got++;
+  }
+  return got === 3;
+}
+
+function assemble(bundle, localMs, sunAz, sid) {
+  const weights = [], vals = { cc_low: [], cc_mid: [], cc_high: [] };
+  let centre = null;
+  for (const p of bundle.points) {
+    const s = p.sources[sid] || {};
+    const dd = Math.abs((sunAz - p.az + 180) % 360 - 180);
+    const aw = dd < 80 ? Math.pow(Math.cos(dd * Math.PI / 360), 2) : 0;
+    weights.push(aw * Math.exp(-p.dist / 260));
+    for (const k of ["cc_low", "cc_mid", "cc_high"]) {
+      vals[k].push(interp(s[k], p.time, localMs));
+    }
+    if (p.dist === 0) centre = p;
+  }
+
+  const wmean = key => {
+    let num = 0, den = 0;
+    weights.forEach((w, i) => {
+      const v = vals[key][i];
+      if (v == null) return;
+      num += w * v; den += w;
+    });
+    return den > 0.2 ? num / den : null;
+  };
+
+  const s = centre.sources[sid] || {};
+  const w = {};
+  for (const key of ["cc_low", "cc_mid", "cc_high", "rh", "precip", "blh", "vis"]) {
+    w[key] = interp(s[key], centre.time, localMs);
+  }
+  for (const key of ["cc_low", "cc_mid", "cc_high"]) {
+    const up = wmean(key);
+    w[key + "_up"] = up == null ? w[key] : up;
+  }
+
+  const aod = interp(centre.aod, centre.time, localMs);
+  let num = 0, den = 0;
+  weights.forEach((wt, i) => {
+    const v = interp(bundle.points[i].aod, bundle.points[i].time, localMs);
+    if (v == null) return;
+    num += wt * v; den += wt;
+  });
+  const aodUp = den > 0.2 ? num / den : null;
+  w.aod = aod == null ? aodUp : aod;
+  w.aod_up = aodUp == null ? w.aod : aodUp;
+
+  const sample = [];
+  weights.forEach((wt, i) => {
+    const mid = vals.cc_mid[i], high = vals.cc_high[i];
+    if (wt > 0.04 && mid != null && high != null) sample.push(0.5 * (mid + high));
+  });
+  if (sample.length >= 4) {
+    const mu = sample.reduce((a, b) => a + b, 0) / sample.length;
+    w.spread = Math.sqrt(sample.reduce((a, b) => a + (b - mu) ** 2, 0) / sample.length);
+  } else {
+    w.spread = null;
+  }
+  return w;
+}
+
+/* ---------------- WeatherAPI (optional) ---------------- */
+async function waSampleAt(lat, lon, wallMs, offsetSec) {
+  // wallMs = 事件时刻的"墙上时钟"毫秒（= epoch + offset*1000）
+  const key = state.waKey;
+  if (!key) return null;
+  const o = dateInOffset(wallMs, 0);
+  const todayO = dateInOffset(Date.now(), offsetSec);
+  const lead = (Date.UTC(o.y, o.m - 1, o.d) - Date.UTC(todayO.y, todayO.m - 1, todayO.d)) / 86400000;
+  if (lead > 2) return null;
+
+  const ck = "wa:" + lat.toFixed(2) + "," + lon.toFixed(2);
+  let data = cacheGet(ck);
+  if (!data) {
+    const url = WA_API + "?key=" + encodeURIComponent(key)
+      + "&q=" + lat.toFixed(4) + "," + lon.toFixed(4)
+      + "&days=3&aqi=no&alerts=no&lang=zh";
+    const res = await fetch(url);
+    data = await res.json();
+    if (!res.ok || data.error) {
+      throw new Error((data.error && data.error.message) || ("HTTP " + res.status));
+    }
+    cachePut(ck, data, CACHE_TTL);
+  }
+  const all = [];
+  for (const day of (data.forecast && data.forecast.forecastday) || []) {
+    for (const h of day.hour || []) all.push(h);
+  }
+  if (!all.length) return null;
+
+  let best = null;
+  for (const h of all) {
+    const t = parseLocalMs(h.time.replace(" ", "T"));
+    const dt = Math.abs(t - wallMs);
+    if (!best || dt < best.dt) best = { dt, h };
+  }
+  const h = best.h;
+  return {
+    time: h.time, cloud_total: h.cloud, humidity: h.humidity,
+    visibility_km: h.vis_km, precip_mm: h.precip_mm, chance_of_rain: h.chance_of_rain,
+    dewpoint_c: h.dewpoint_c, temp_c: h.temp_c, wind_kph: h.wind_kph,
+    condition: (h.condition || {}).text, offset_minutes: Math.round(best.dt / 60000),
+  };
+}
+
+function fillAux(w, wa) {
+  const used = {};
+  if (!wa) return used;
+  if (w.vis == null && wa.visibility_km != null) { w.vis = wa.visibility_km * 1000; used.vis = "weatherapi"; }
+  if (w.rh == null && wa.humidity != null) { w.rh = wa.humidity; used.rh = "weatherapi"; }
+  if ((w.precip || 0) <= 0 && wa.precip_mm) { w.precip = wa.precip_mm; used.precip = "weatherapi"; }
+  return used;
+}
+
+/* ---------------- confidence / reasons / risks ---------------- */
+function confidence(lead, sourceKind, w) {
+  let c;
+  if (sourceKind === "direct") {
+    c = 0.74;
+    if (w.spread != null) c -= Math.min(0.15, w.spread / 400);
+    return clamp(c, 0.2, 0.9);
+  }
+  c = 0.86 - 0.058 * Math.max(0, lead);
+  if (w.spread != null) c -= Math.min(0.22, w.spread / 280);
+  if (w.aod == null) c -= 0.08;
+  return clamp(c, 0.15, 0.95);
+}
+
+function reasons(w, r) {
+  const f = r.features, out = [];
+  if (f.canvas < 0.20) out.push({ k: "neg", t: "缺少可被照亮的云层：中高空云量不足以形成幕布" });
+  else if (f.canvas < 0.45) out.push({ k: "warn", t: "云量偏少，只有局部云块可能被染色" });
+  else out.push({ k: "pos", t: "中高空云层配置良好，具备大面积受光条件" });
+
+  if (f.horizon < 0.55) out.push({ k: "neg", t: "太阳方向低云遮挡明显，光路被切断（上游低云 " + Math.round(w.cc_low_up || 0) + "%）" });
+  else if (f.horizon < 0.8) out.push({ k: "warn", t: "上游低云偏多，地平线附近光路存在不确定性" });
+
+  if (f.purity < 0.55) out.push({ k: "neg", t: "空气通透度不足：气溶胶消光或湿度偏高，颜色会发灰" });
+  else if (f.purity > 0.85) out.push({ k: "pos", t: "大气洁净干燥，瑞利散射占主导，颜色更纯" });
+
+  if (f.light < 0.02) out.push({ k: "neg", t: "到达云底的直射光已极弱，接近地球阴影边界" });
+  else if (f.light < 0.06) out.push({ k: "warn", t: "云底较低，受光时间窗口短、亮度有限" });
+  else out.push({ k: "pos", t: "云底受光充分，亮度条件良好" });
+
+  if ((w.precip || 0) >= 0.2) out.push({ k: "neg", t: "事件时段有降水，云系厚度大、透光性差" });
+  return out;
+}
+
+/* ---------------- main flow ---------------- */
+function toast(msg) {
+  const el = $("#toast");
+  el.textContent = msg;
+  el.classList.add("on");
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove("on"), 2600);
+}
+/* 参数改动只做标记，不触发取数——取数只发生在「开始预测」被点击时 */
+function markDirty() {
+  const b = $("#go");
+  if (!b || state.busy) return;
+  b.classList.add("dirty");
+  b.textContent = "开始预测 ●";
+}
+function clearDirty() {
+  const b = $("#go");
+  if (!b) return;
+  b.classList.remove("dirty");
+  b.textContent = "开始预测";
+}
+
+function busy(on) {
+  state.busy = on;
+  $("#go").disabled = on;
+  $("#go").textContent = on ? "获取中…" : "开始预测";
+}
+
+function applyPlace(p, silent) {
+  state.lat = +p.lat; state.lon = +p.lon; state.name = p.name;
+  $("#loc").value = p.name;
+  $("#suggest").hidden = true;
+  if ($("#inLat")) $("#inLat").value = state.lat.toFixed(4);
+  if ($("#inLon")) $("#inLon").value = state.lon.toFixed(4);
+  if (!silent) markDirty();
+}
+
+let sugItems = [], sugTimer = null;
+
+function renderSuggest(results) {
+  const box = $("#suggest");
+  sugItems = results;
+  if (!results.length) { box.hidden = true; return; }
+  box.innerHTML = results.map((r, i) => {
+    const admin = [r.admin, r.country].filter(Boolean).join(" · ");
+    return '<button data-i="' + i + '"><span>' + r.name + '</span>'
+      + '<span class="s-admin">' + admin + '</span>'
+      + '<span class="s-coord">' + r.lat.toFixed(2) + ", " + r.lon.toFixed(2) + '</span></button>';
+  }).join("");
+  box.hidden = false;
+  $$("#suggest button").forEach(b => {
+    b.onmousedown = e => e.preventDefault();
+    b.onclick = () => applyPlace(sugItems[+b.dataset.i]);
+  });
+}
+
+const SUFFIX = ["特别行政区", "自治区", "自治州", "新区", "开发区", "地区", "林区",
+  "省", "市", "区", "县", "旗", "盟", "镇", "乡", "街道"];
+
+function splitAdmin(text) {
+  const segs = []; let buf = "", i = 0;
+  while (i < text.length) {
+    buf += text[i];
+    let hit = null;
+    for (const suf of SUFFIX) if (text.startsWith(suf, i + 1)) { hit = suf; break; }
+    if (hit && buf.length >= 2) {
+      segs.push(buf + hit); buf = ""; i += 1 + hit.length; continue;
+    }
+    i++;
+  }
+  if (buf) { if (segs.length) segs[segs.length - 1] += buf; else segs.push(buf); }
+  return segs;
+}
+function stripAdmin(t) {
+  for (const suf of SUFFIX) if (t.endsWith(suf) && t.length - suf.length >= 2) return t.slice(0, -suf.length);
+  return t;
+}
+
+async function geocode(q) {
+  const raw = (q || "").trim();
+  if (!raw) return [];
+  const parts = raw.split(/[\s,，、/]+/).filter(Boolean).sort((a, b) => b.length - a.length);
+  const terms = [];
+  const add = t => { if (t && t.length >= 2 && !terms.includes(t)) terms.push(t); };
+  for (const p of parts) {
+    const segs = splitAdmin(p);
+    [...segs].reverse().forEach(add);
+    [...segs].reverse().forEach(s => add(stripAdmin(s)));
+    add(p);
+  }
+  if (!terms.includes(raw)) terms.push(raw);
+
+  const chinese = /[\u4e00-\u9fa5]/.test(raw);
+  let pool = [];
+  for (const t of terms) {
+    try {
+      const url = OM_GEO + "?name=" + encodeURIComponent(t) + "&count=8&language=zh&format=json";
+      const d = await getJSON(url, 7 * 86400000);
+      pool = d.results || [];
+    } catch (e) { pool = []; }
+    if (pool.length) break;
+  }
+  let out = pool.map(r => ({
+    name: r.name, admin: r.admin1 || "", country: r.country || "",
+    lat: r.latitude, lon: r.longitude, population: r.population || 0,
+  }));
+  if (chinese) {
+    const cn = out.filter(x => x.country === "中国");
+    if (cn.length) out = cn;
+  }
+  out.sort((a, b) => (b.population || 0) - (a.population || 0));
+  return out;
+}
+
+async function searchLoc(q) {
+  if (!q || !q.trim()) { $("#suggest").hidden = true; return []; }
+  try {
+    const r = await geocode(q.trim());
+    renderSuggest(r);
+    return r;
+  } catch (e) { $("#suggest").hidden = true; return []; }
+}
+
+async function resolveInput() {
+  const txt = ($("#loc").value || "").trim();
+  if (!txt) { toast("请输入地点"); return false; }
+  if (txt === state.name && state.lat != null) return true;
+  const m = txt.match(/^\s*(-?\d+(?:\.\d+)?)\s*[,，]\s*(-?\d+(?:\.\d+)?)\s*$/);
+  if (m) {
+    const la = +m[1], lo = +m[2];
+    if (!(-90 <= la && la <= 90) || !(-180 <= lo && lo <= 180)) { toast("经纬度超出范围"); return false; }
+    state.lat = la; state.lon = lo;
+    state.name = la.toFixed(2) + "," + lo.toFixed(2);
+    $("#suggest").hidden = true;
+    return true;
+  }
+  try {
+    const r = await geocode(txt);
+    if (!r.length) { toast("未找到「" + txt + "」，试试更常见的名称或直接输入经纬度"); return false; }
+    applyPlace(r[0], true);
+    return true;
+  } catch (e) { toast("地点解析失败：" + e.message); return false; }
+}
+
+/* ---------------- orchestration ---------------- */
+async function run() {
+  if (state.busy) return;
+  clearDirty();
+  busy(true);
+  $("#srcList").innerHTML = '<div class="empty"><span class="spin"></span>正在取数…</div>';
+  $("#weekGrid").innerHTML = '<div class="empty"><span class="spin"></span>正在计算七日趋势…</div>';
+  $("#dirList").innerHTML = '<div class="empty">—</div>';
+  try {
+    const now = new Date();
+    const bToday = { y: now.getFullYear(), m: now.getMonth() + 1, d: now.getDate() };
+    const todayMs = Date.UTC(bToday.y, bToday.m - 1, bToday.d);
+    const DAY = 86400000;
+
+    // 先按输入框的日期取数；若未定，用浏览器今天
+    if (!state.date) state.date = isoDate(bToday);
+    $("#date").value = state.date;
+    let [yy, mm, dd] = state.date.split("-").map(Number);
+    let selMs = Date.UTC(yy, mm - 1, dd);
+
+    // 数据窗口必须覆盖所选日期，否则四源会全空
+    const archive = selMs < todayMs - 2 * DAY;
+    if (Math.abs(selMs - todayMs) / DAY > 10) {
+      throw new Error("所选日期距今天超过 10 天，预报模式覆盖不到");
+    }
+    const iso = ms => {
+      const d = new Date(ms);
+      return d.getUTCFullYear() + "-" + pad2(d.getUTCMonth() + 1) + "-" + pad2(d.getUTCDate());
+    };
+    // 25 个上游格点不可省：把它们减到只剩中心点，实测概率偏差最大 42pp。
+    const bundle = await fetchBundle(state.lat, state.lon,
+      iso(selMs - DAY), iso(selMs + DAY), archive);
+    const off = bundle.offset;
+    const offH = off / 3600;
+    const locToday = dateInOffset(Date.now(), off);
+
+    const lead = Math.round((selMs - Date.UTC(locToday.y, locToday.m - 1, locToday.d)) / DAY);
+    state._bundle = bundle;
+    state._off = off;
+
+    const results = {};
+    for (const key of ["sunrise", "sunset"]) {
+      const ev = eventTimes(state.lat, state.lon, yy, mm, dd, offH, 2, key)[key];
+      if (ev == null) { results[key] = null; continue; }
+      const [elev, az] = solarPosition(state.lat, state.lon, ev);
+      const localMs = ev + off * 1000;   // 墙上时钟毫秒
+
+      let wa = null, waErr = null;
+      try { wa = await waSampleAt(state.lat, state.lon, localMs, off); }
+      catch (e) { waErr = e.message; }
+
+      const per = {};
+      for (const s of SOURCES) {
+        const centre = bundle.points[0];
+        if (!sourceAvailable(centre, s.id, localMs)) {
+          per[s.id] = { id: s.id, error: "该源在此刻无分层云量", origin: "none" };
+          continue;
+        }
+        const w = assemble(bundle, localMs, az, s.id);
+        const filled = fillAux(w, wa);
+        const r = assess(w, elev, key, MODEL);
+        const o = dateInOffset(localMs, 0);
+        per[s.id] = Object.assign(r, {
+          id: s.id, origin: "relay",
+          time: new Date(ev).toISOString(),
+          time_label: pad2(o.hh) + ":" + pad2(o.mm),
+          window: bestWindow(timeline(w, ev, state.lat, state.lon, MODEL)),
+          confidence: round(confidence(lead, "relay", w), 2),
+          reasons: reasons(w, r),
+          risks: [],
+          context: {
+            cloud_low: Math.round(w.cc_low || 0), cloud_mid: Math.round(w.cc_mid || 0),
+            cloud_high: Math.round(w.cc_high || 0),
+            cloud_low_up: Math.round(w.cc_low_up || 0),
+            aod: w.aod == null ? null : round(w.aod, 3),
+            rh: Math.round(w.rh || 0),
+            vis_km: w.vis == null ? null : round(w.vis / 1000, 1),
+          },
+          aux_from: Object.keys(filled).length ? filled : undefined,
+          aux_check: wa ? {
+            cloud_ours: Math.round(Math.max(w.cc_low || 0, w.cc_mid || 0, w.cc_high || 0)),
+            cloud_aux: wa.cloud_total,
+            cloud_gap: wa.cloud_total == null ? null
+              : Math.round(Math.abs(Math.max(w.cc_low || 0, w.cc_mid || 0, w.cc_high || 0) - wa.cloud_total)),
+            vis_aux_km: wa.visibility_km, rh_aux: wa.humidity,
+            rain_chance: wa.chance_of_rain, precip_aux: wa.precip_mm,
+            condition: wa.condition, time: wa.time,
+          } : undefined,
+          _w: w, _ev: ev,
+        });
+        if (wa) {
+          const ours = Math.max(w.cc_low || 0, w.cc_mid || 0, w.cc_high || 0);
+          if (wa.cloud_total != null && Math.abs(ours - wa.cloud_total) >= 35) {
+            per[s.id].risks.push("校验源总云量 " + wa.cloud_total + "% 与我们诊断的 "
+              + Math.round(ours) + "% 相差较大，该时刻云量存在不确定性");
+          } else if ((wa.chance_of_rain || 0) >= 60) {
+            per[s.id].risks.push("校验源给出 " + wa.chance_of_rain + "% 降水概率（"
+              + (wa.condition || "降水") + "），雨幕可能压低能见度与色彩纯度");
+          }
+        }
+      }
+      const ok = Object.values(per).filter(v => !v.error);
+      results[key] = {
+        time: new Date(ev).toISOString(),
+        time_label: hhmmWall(localMs),
+        azimuth: round(az, 1), sun_elev: round(elev, 3),
+        sources: per,
+        wa_error: waErr,
+        consensus: ok.length ? {
+          mean: round(ok.reduce((a, v) => a + v.probability, 0) / ok.length, 4),
+          min: round(Math.min(...ok.map(v => v.probability)), 4),
+          max: round(Math.max(...ok.map(v => v.probability)), 4),
+          n: ok.length,
+        } : null,
+      };
+    }
+
+    state.data = {
+      location: { name: state.name, lat: state.lat, lon: state.lon, elevation: bundle.elevation },
+      date: state.date, offset: off, tz: bundle.tz,
+      results,
+      generated_at: new Date().toISOString(),
+    };
+    render(state.data);
+
+    // 七日 + 方位：后台继续，不阻塞主结果
+    loadWeek(bundle, off, yy, mm, dd, locToday);
+    loadRadar(off, yy, mm, dd);
+  } catch (e) {
+    toast("计算失败：" + e.message);
+    $("#srcList").innerHTML = '<div class="empty">取数失败：' + e.message + '</div>';
+    $("#weekGrid").innerHTML = '<div class="empty">—</div>';
+  } finally {
+    busy(false);
+  }
+}
+
+/* ---------------- 7-day ---------------- */
+async function loadWeek(bMain, off, yy, mm, dd, locToday) {
+  try {
+    // isoDate 接受 {y,m,d}，不是 Date —— 传 Date 会拼出 "undefined-undefined-undefined"
+    // 七日条不画时间曲线，事件瞬时必在当日，故从今天起取，不向前多要一天
+    const dStart = new Date(Date.UTC(locToday.y, locToday.m - 1, locToday.d));
+    const dEnd = new Date(Date.UTC(locToday.y, locToday.m - 1, locToday.d + 7));
+    const start = isoDate({ y: dStart.getUTCFullYear(), m: dStart.getUTCMonth() + 1,
+                            d: dStart.getUTCDate() });
+    const end = isoDate({ y: dEnd.getUTCFullYear(), m: dEnd.getUTCMonth() + 1,
+                          d: dEnd.getUTCDate() });
+    const b2 = await fetchBundle(state.lat, state.lon, start, end, false);
+    const offH = b2.offset / 3600;
+    const days = [];
+    for (let i = 0; i <= 7; i++) {
+      const dt = new Date(Date.UTC(locToday.y, locToday.m - 1, locToday.d + i));
+      const y2 = dt.getUTCFullYear(), m2 = dt.getUTCMonth() + 1, d2 = dt.getUTCDate();
+      const ev2 = eventTimes(state.lat, state.lon, y2, m2, d2, offH, 3, state.mode)[state.mode];
+      const row = {
+        date: y2 + "-" + pad2(m2) + "-" + pad2(d2),
+        weekday: "周" + "日一二三四五六"[dt.getUTCDay()],
+      };
+      if (ev2 == null) { row[state.mode] = null; days.push(row); continue; }
+      const [, az2] = solarPosition(state.lat, state.lon, ev2);
+      const localMs = ev2 + b2.offset * 1000;
+      const per = {};
+      for (const s of SOURCES) {
+        if (!sourceAvailable(b2.points[0], s.id, localMs)) { per[s.id] = { error: "无数据" }; continue; }
+        const w = assemble(b2, localMs, az2, s.id);
+        const [e2] = solarPosition(state.lat, state.lon, ev2);
+        const r = assess(w, e2, state.mode, MODEL);
+        per[s.id] = { p: r.probability, grade: r.grade, hex: r.colour.hex };
+      }
+      const ok = Object.values(per).filter(v => !v.error);
+      const prim = per.openmeteo && !per.openmeteo.error ? per.openmeteo : ok[0] || {};
+      row[state.mode] = {
+        time: hhmmLocal(ev2, b2.offset),
+        sources: per,
+        probability: prim.p == null ? null : prim.p,
+        grade: prim.grade, hex: prim.hex,
+        spread: ok.length > 1
+          ? Math.round((Math.max(...ok.map(v => v.p)) - Math.min(...ok.map(v => v.p))) * 100) : null,
+      };
+      days.push(row);
+    }
+    state.week = days;
+    renderWeek(days);
+  } catch (e) {
+    $("#weekGrid").innerHTML = '<div class="empty">七日趋势暂不可用：' + e.message + '</div>';
+  }
+}
+
+/* ---------------- azimuth radar ---------------- */
+async function loadRadar(off, yy, mm, dd) {
+  $("#radarSp").textContent = "正在扫描 16 个方位…";
+  try {
+    const ev = eventTimes(state.lat, state.lon, yy, mm, dd, off / 3600, 5, state.mode)[state.mode];
+    if (ev == null) throw new Error("该日无有效时刻");
+    const pos = solarPosition(state.lat, state.lon, ev);
+    const elev = pos[0], sunAz = pos[1];
+
+    const pts = [];
+    for (let i = 0; i < 16; i++) {
+      const az = i * 22.5;
+      for (const d of AZ_DISTANCES) {
+        const la = state.lat + Math.cos(az * Math.PI / 180) * d / 111;
+        const lo = state.lon + Math.sin(az * Math.PI / 180) * d
+          / (111 * Math.max(0.2, Math.cos(state.lat * Math.PI / 180)));
+        pts.push([round(la, 3), round(lo, 3), i, d]);
+      }
+    }
+    for (const d of AZ_TRANSECT) {
+      const la = state.lat + Math.cos(sunAz * Math.PI / 180) * d / 111;
+      const lo = state.lon + Math.sin(sunAz * Math.PI / 180) * d
+        / (111 * Math.max(0.2, Math.cos(state.lat * Math.PI / 180)));
+      pts.push([round(la, 3), round(lo, 3), -1, d]);
+    }
+
+    const dStr = yy + "-" + pad2(mm) + "-" + pad2(dd);
+    const url = OM_FORECAST + "?latitude=" + pts.map(p => p[0].toFixed(3)).join(",")
+      + "&longitude=" + pts.map(p => p[1].toFixed(3)).join(",")
+      + "&start_date=" + dStr + "&end_date=" + dStr
+      + "&hourly=" + AZ_VARS + "&models=" + MODELS_PARAM + "&timezone=UTC";
+    let data = await getJSON(url, CACHE_TTL);
+    if (!Array.isArray(data)) data = [data];
+
+    // timezone=UTC: 返回的时间串与 ev 都按 UTC 解释，插值无需再偏移
+    const tLocal = ev;
+
+    const perSource = {};
+    for (const s of SOURCES) {
+      const rows = pts.map((p, i) => {
+        const h = (data[i] && data[i].hourly) || {};
+        const times = h.time || [];
+        const sid = s.id;
+        const get = vn => seriesFor(h, vn, s.tokens);
+        return {
+          dir: p[2], dist: p[3],
+          low: interp(get("cloud_cover_low"), times, tLocal),
+          mid: interp(get("cloud_cover_mid"), times, tLocal),
+          high: interp(get("cloud_cover_high"), times, tLocal),
+          blh: interp(get("boundary_layer_height"), times, tLocal),
+        };
+      });
+      if (rows.every(r => r.low == null && r.mid == null && r.high == null)) {
+        perSource[s.id] = { id: s.id, error: "无数据" };
+        continue;
+      }
+      const dirs = [];
+      for (let i = 0; i < 16; i++) {
+        const sub = rows.filter(r => r.dir === i);
+        let num = 0, den = 0;
+        let best = { deck: -1, dist: null, cover: 0 };
+        for (const r of sub) {
+          const uMid = Math.min(1, (r.mid || 0) / 100);
+          const uHigh = Math.min(1, (r.high || 0) / 100);
+          const deck = Math.max(1 - Math.exp(-3.7 * uMid), 1 - Math.exp(-3.1 * uHigh));
+          const wgt = Math.exp(-(((r.dist - 200) / 170) ** 2));
+          num += wgt * deck; den += wgt;
+          if (deck > best.deck) best = { deck, dist: r.dist, cover: (r.mid || 0) + (r.high || 0) };
+        }
+        const canvas = den ? num / den : 0;
+        const near = sub.filter(r => r.dist <= 140);
+        const block = near.length ? Math.max(...near.map(r => r.low || 0)) / 100 : 0;
+        const delta = Math.abs((sunAz - i * 22.5 + 180) % 360 - 180);
+        const sector = delta < 90 ? Math.pow(Math.cos(delta * Math.PI / 360), 2) : 0;
+        const score = 100 * canvas * (1 - 0.7 * block) * (0.22 + 0.78 * sector);
+        dirs.push({
+          az: i * 22.5, name: DIR_NAMES[i],
+          score: round(Math.max(0, Math.min(100, score)), 1),
+          dist: best.dist, canvas: round(canvas, 3), block: round(block, 2),
+        });
+      }
+      perSource[s.id] = { id: s.id, dirs, best: dirs.reduce((a, b) => (b.score > a.score ? b : a)) };
+    }
+    state.radar = { sun_az: round(sunAz, 1), sun_elev: round(elev, 2), sources: perSource };
+    renderRadar(state.radar);
+  } catch (e) {
+    $("#radarSp").textContent = "方位分析不可用：" + e.message;
+    $("#dirList").innerHTML = '<div class="empty">' + e.message + '</div>';
+  }
+}
+
+/* ---------------- rendering ---------------- */
+function fmtPct(p) { return (p == null ? "—" : (p * 100).toFixed(0)); }
+
+function render(data) {
+  const ev = data.results[state.mode];
+  const off = data.offset;
+  if (!ev) { toast("该日期无有效的日出/日落时刻"); return; }
+  const prim = ev.sources.openmeteo && !ev.sources.openmeteo.error
+    ? ev.sources.openmeteo
+    : Object.values(ev.sources).find(v => !v.error);
+
+  $("#heroEyebrow").textContent = state.mode === "sunset" ? "晚霞 · SUNSET" : "朝霞 · SUNRISE";
+  $("#heroPlace").textContent = data.location.name;
+  $("#heroDate").textContent = data.date;
+  $("#heroTime").textContent = (state.mode === "sunset" ? "日落 " : "日出 ") + ev.time_label;
+  $("#heroCoord").textContent = data.location.lat.toFixed(4) + "°N  "
+    + data.location.lon.toFixed(4) + "°E"
+    + (data.location.elevation != null ? "  ·  海拔 " + Math.round(data.location.elevation) + " m" : "");
+
+  if (prim) {
+    $("#heroPct").innerHTML = fmtPct(prim.probability) + "<small>%</small>";
+    $("#heroGrade").innerHTML = prim.grade_label
+      + '<span class="sub">' + prim.colour.name + " · 置信度 "
+      + Math.round((prim.confidence || 0) * 100) + "%</span>";
+    $("#heroGrade").style.color = prim.grade_color;
+    $("#heroSwatch").style.background = prim.colour.hex;
+    const win = prim.window;
+    $("#heroMeta").innerHTML = [
+      ["最佳窗口", win ? (win.start_min + " → " + win.end_min + " 分") : "—"],
+      ["持续", win ? win.duration + " 分钟" : "—"],
+      ["云幕", Math.round(prim.features.canvas * 100) + "%"],
+      ["受光", (prim.features.light * 100).toFixed(1) + "%"],
+      ["通透", Math.round(prim.features.purity * 100) + "%"],
+      ["AOD", prim.features.aod.toFixed(2)],
+    ].map(([k, v]) => '<div class="meta-item"><div class="k">' + k + '</div><div class="v">' + v + "</div></div>").join("");
+  } else {
+    $("#heroPct").innerHTML = "—";
+    $("#heroGrade").textContent = "该时刻四个数据源均无分层云量";
+    $("#heroMeta").innerHTML = "";
+  }
+
+  // source list
+  const cons = ev.consensus;
+  $("#srcList").innerHTML = SOURCES.map(s => {
+    const v = ev.sources[s.id];
+    if (!v || v.error) {
+      return '<div class="src-row"><i style="background:' + s.color + '"></i>'
+        + '<span class="nm">' + s.label + '</span><span class="pv err">失败</span></div>';
+    }
+    const p = Math.round(v.probability * 100);
+    return '<div class="src-row"><i style="background:' + s.color + '"></i>'
+      + '<span class="nm">' + s.label + (v.aux_from ? ' <span style="color:#8fbfa4;font-size:10px">+补</span>' : '') + '</span>'
+      + '<span class="bar"><span style="width:' + p + '%;background:' + s.color + '"></span></span>'
+      + '<span class="pv">' + p + '%</span></div>';
+  }).join("") + (cons ? '<div style="margin-top:10px;font-size:11.5px;color:var(--muted2)">一致四源 '
+    + fmtPct(cons.min) + "–" + fmtPct(cons.max) + "%（均值 " + fmtPct(cons.mean)
+    + "%），极差 " + Math.round((cons.max - cons.min) * 100) + "pp</div>" : "");
+
+  // decks + chips
+  const d = prim || ev.sources[SOURCES[0].id];
+  if (d && d.decks) {
+    const base = { low: "#5b6477", mid: "#b5764a", high: "#ff8a4c" };
+    $("#deckList").innerHTML = d.decks.map(x => {
+      const w = Math.round(x.canvas * 100);
+      return '<div class="deck"><span class="dn">' + x.label + '</span>'
+        + '<div class="dbar"><span style="width:' + w + '%;background:' + (base[x.key] || "#888") + '"></span></div>'
+        + '<span class="dv">' + Math.round(x.cover) + '% → ' + w + '</span></div>';
+    }).join("");
+    $("#deckSp").textContent = "云量 → 可用云幕";
+  }
+  if (d && d.reasons) {
+    const all = d.reasons.concat((d.risks || []).map(t => ({ k: "warn", t })));
+    $("#chips").innerHTML = all.map(c => '<span class="chip ' + c.k + '">' + c.t + "</span>").join("")
+      || '<span class="chip">—</span>';
+    $("#reasonSp").textContent = d.id + " · 主源";
+  }
+
+  drawTimeline(prim || d);
+  renderWeek(state.week);
+}
+
+function drawTimeline(prim) {
+  const cv = $("#tl");
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const w = cv.clientWidth, h = 190;
+  cv.width = w * dpr; cv.height = h * dpr;
+  const ctx = cv.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  if (!prim || !prim._w) {
+    ctx.fillStyle = "rgba(255,255,255,.3)";
+    ctx.font = "12px sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("—", w / 2, h / 2);
+    return;
+  }
+  const tl = timeline(prim._w, prim._ev, state.lat, state.lon, MODEL);
+  const padL = 34, padR = 12, padT = 12, padB = 26;
+  const xs = v => padL + (v + 35) / 90 * (w - padL - padR);
+  const ys = v => padT + (1 - v) * (h - padT - padB);
+
+  // grid
+  ctx.strokeStyle = "rgba(255,255,255,.06)";
+  ctx.lineWidth = 1;
+  for (let p = 0; p <= 100; p += 25) {
+    const y = ys(p / 100);
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(w - padR, y); ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,.28)";
+    ctx.font = "9px ui-monospace,monospace"; ctx.textAlign = "right";
+    ctx.fillText(p + "%", padL - 6, y + 3);
+  }
+  // window band
+  if (prim.window) {
+    const x1 = xs(prim.window.start_min), x2 = xs(prim.window.end_min);
+    ctx.fillStyle = "rgba(255,138,76,.10)";
+    ctx.fillRect(x1, padT, Math.max(1, x2 - x1), h - padT - padB);
+  }
+  // zero line
+  ctx.strokeStyle = "rgba(255,255,255,.22)";
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath(); ctx.moveTo(xs(0), padT); ctx.lineTo(xs(0), h - padB); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // curve
+  ctx.beginPath();
+  tl.forEach((p, i) => {
+    const x = xs(p.minute), y = ys(p.view);
+    i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  });
+  ctx.strokeStyle = "#ff8a4c"; ctx.lineWidth = 2; ctx.stroke();
+  const grd = ctx.createLinearGradient(0, padT, 0, h - padB);
+  grd.addColorStop(0, "rgba(255,138,76,.32)");
+  grd.addColorStop(1, "rgba(255,138,76,0)");
+  ctx.lineTo(xs(tl[tl.length - 1].minute), h - padB);
+  ctx.lineTo(xs(tl[0].minute), h - padB);
+  ctx.closePath(); ctx.fillStyle = grd; ctx.fill();
+
+  // peak
+  const peak = tl.reduce((a, b) => (b.view > a.view ? b : a));
+  ctx.beginPath();
+  ctx.arc(xs(peak.minute), ys(peak.view), 3.5, 0, Math.PI * 2);
+  ctx.fillStyle = "#ffd166"; ctx.fill();
+
+  // x labels
+  ctx.fillStyle = "rgba(255,255,255,.32)";
+  ctx.font = "9px ui-monospace,monospace"; ctx.textAlign = "center";
+  [-35, -20, 0, 20, 40, 55].forEach(m => {
+    if (m < -35 || m > 55) return;
+    ctx.fillText(m === 0 ? (state.mode === "sunset" ? "日落" : "日出") : (m > 0 ? "+" + m : m), xs(m), h - 8);
+  });
+
+  $("#tlSp").textContent = "相对" + (state.mode === "sunset" ? "日落" : "日出") + "时刻（分钟）";
+  const win = prim.window;
+  $("#winRow").innerHTML = win
+    ? '<div>最佳 <b>' + win.start_min + " → " + win.end_min + ' 分</b>（峰值 +'
+      + win.peak_min + " 分，观赏度 " + Math.round(win.peak_probability * 100) + "%）</div>"
+      + '<div>持续 <b>' + win.duration + " 分钟</b></div>"
+      + '<div>峰值概率 <b>' + Math.round(peak.probability * 100) + "%</b></div>"
+    : '<div class="fine">该时段没有形成有效观赏窗口。</div>';
+}
+
+function renderWeek(days) {
+  if (!days || !days.length) { $("#weekGrid").innerHTML = '<div class="empty">—</div>'; return; }
+  $("#weekGrid").innerHTML = days.map(d => {
+    const e = d[state.mode];
+    const p = e && e.probability != null ? Math.round(e.probability * 100) : null;
+    const on = d.date === state.date ? " on" : "";
+    return '<div class="wday' + on + '" data-date="' + d.date + '">'
+      + '<div class="wd">' + d.weekday + '</div>'
+      + '<div class="wn">' + d.date.slice(5).replace("-", "/") + '</div>'
+      + '<div class="wp">' + (p == null ? '<span style="font-size:11px;color:var(--muted2)">失败</span>'
+        : p + '<small>%</small>') + '</div>'
+      + '<div class="wb"><i style="width:' + clamp(p || 3, 3, 100) + '%;background:'
+      + (e && e.hex ? e.hex : "#5b6477") + '"></i></div>'
+      + '<div class="wl">' + (e && e.spread != null ? "极差 " + e.spread + "pp" : "") + '</div>'
+      + "</div>";
+  }).join("");
+  $$(".wday").forEach(el => el.onclick = () => {
+    state.date = el.dataset.date;
+    $("#date").value = state.date;
+    markDirty();
+  });
+  $("#weekSp").textContent = "按" + (state.mode === "sunset" ? "日落" : "日出") + "时刻 · 点击切换日期，再按「开始预测」";
+}
+
+function renderRadar(rad) {
+  const ok = Object.values(rad.sources).filter(v => !v.error);
+  if (!ok.length) { $("#dirList").innerHTML = '<div class="empty">方位数据不可用</div>'; return; }
+  const prim = rad.sources.openmeteo && !rad.sources.openmeteo.error
+    ? rad.sources.openmeteo : ok[0];
+
+  const cv = $("#radar");
+  const box = cv.parentElement;
+  const size = Math.min(box.clientWidth, 330);
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = size * dpr; cv.height = size * dpr;
+  cv.style.width = size + "px"; cv.style.height = size + "px";
+  const ctx = cv.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, size, size);
+  const cx = size / 2, cy = size / 2, R = size / 2 - 30;
+
+  ctx.strokeStyle = "rgba(255,255,255,.08)";
+  [0.25, 0.5, 0.75, 1].forEach(f => {
+    ctx.beginPath(); ctx.arc(cx, cy, R * f, 0, Math.PI * 2); ctx.stroke();
+  });
+  for (let i = 0; i < 16; i++) {
+    const a = (i * 22.5 - 90) * Math.PI / 180;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R);
+    ctx.stroke();
+  }
+
+  // sun direction marker
+  const sa = (rad.sun_az - 90) * Math.PI / 180;
+  ctx.strokeStyle = "rgba(255,209,102,.45)";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + Math.cos(sa) * R, cy + Math.sin(sa) * R); ctx.stroke();
+  ctx.fillStyle = "rgba(255,209,102,.85)";
+  ctx.font = "9px ui-monospace,monospace"; ctx.textAlign = "center";
+  ctx.fillText("太阳", cx + Math.cos(sa) * (R + 14), cy + Math.sin(sa) * (R + 14) + 3);
+
+  // polygons per source
+  const colors = { openmeteo: "#ff8a4c", ecmwf: "#6f8fb8", gfs: "#5ad19a", icon: "#c58ad6" };
+  ok.forEach(s => {
+    ctx.beginPath();
+    s.dirs.forEach((d, i) => {
+      const a = (d.az - 90) * Math.PI / 180;
+      const r = R * clamp(d.score / 100, 0.02, 1);
+      const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    });
+    ctx.closePath();
+    ctx.fillStyle = colors[s.id] + "22";
+    ctx.strokeStyle = colors[s.id] + "cc";
+    ctx.lineWidth = s.id === prim.id ? 1.8 : 1;
+    ctx.fill(); ctx.stroke();
+  });
+
+  // labels
+  ctx.fillStyle = "rgba(255,255,255,.4)";
+  ctx.font = "9px sans-serif"; ctx.textAlign = "center";
+  ["北", "东", "南", "西"].forEach((t, i) => {
+    const a = (i * 90 - 90) * Math.PI / 180;
+    ctx.fillText(t, cx + Math.cos(a) * (R + 15), cy + Math.sin(a) * (R + 15) + 3);
+  });
+
+  const best = prim.best;
+  $("#radarSp").textContent = "太阳方位 " + rad.sun_az + "° · 太阳高度 " + rad.sun_elev
+    + "° · 最佳 " + best.name + " " + best.score;
+
+  const top = [...prim.dirs].sort((a, b) => b.score - a.score).slice(0, 8);
+  $("#dirList").innerHTML = top.map(d =>
+    '<div class="dirline"><span class="nm">' + d.name + '</span>'
+    + '<span class="b"><i style="width:' + clamp(d.score, 1, 100) + '%;background:#ff8a4c"></i></span>'
+    + '<span class="v">' + d.score + "</span></div>"
+  ).join("") + '<div class="fine" style="margin-top:8px">条形表示该方位可被染色云幕的强度（0–100），'
+    + "只考虑中高云，已按近处低云遮挡与太阳方位角衰减。</div>";
+}
+
+/* ---------------- wiring ---------------- */
+function openCoord(on) {
+  const panel = $("#coordPanel");
+  panel.hidden = !on;
+  $("#coordToggle").textContent = on ? "自定义经纬度 ▴" : "自定义经纬度 ▾";
+  if (on) {
+    if (!$("#inLat").value) $("#inLat").value = state.lat.toFixed(4);
+    if (!$("#inLon").value) $("#inLon").value = state.lon.toFixed(4);
+    $("#inLat").focus();
+  }
+}
+function coordHint(msg, err) {
+  const el = $("#coordHint");
+  el.textContent = msg || "范围：纬度 −90～90，经度 −180～180";
+  el.classList.toggle("err", !!err);
+}
+function readCoord() {
+  const a = ($("#inLat").value || "").trim(), b = ($("#inLon").value || "").trim();
+  if (!a || !b) { coordHint("请同时填写纬度与经度", true); return null; }
+  const la = Number(a), lo = Number(b);
+  if (!isFinite(la) || !isFinite(lo)) { coordHint("经纬度必须是数字", true); return null; }
+  if (la < -90 || la > 90) { coordHint("纬度需在 −90 到 90 之间", true); return null; }
+  if (lo < -180 || lo > 180) { coordHint("经度需在 −180 到 180 之间", true); return null; }
+  return { lat: la, lon: lo };
+}
+function applyCoord() {
+  const v = readCoord();
+  if (!v) return false;
+  const note = ($("#inName").value || "").trim();
+  state.lat = round(v.lat, 4); state.lon = round(v.lon, 4);
+  state.name = note || state.lat.toFixed(3) + "," + state.lon.toFixed(3);
+  $("#loc").value = state.name;
+  $("#suggest").hidden = true;
+  coordHint(state.lat.toFixed(4) + "°N  " + state.lon.toFixed(4) + "°E 已应用", false);
+  return true;
+}
+
+function init() {
+  const today = new Date();
+  $("#date").value = isoDate({ y: today.getFullYear(), m: today.getMonth() + 1, d: today.getDate() });
+  state.date = $("#date").value;
+
+  try { state.waKey = localStorage.getItem("skyglow:waKey") || null; } catch (e) { }
+  if (state.waKey) {
+    $("#waSp").textContent = "已配置（…" + state.waKey.slice(-4) + "）";
+    $("#waKey").value = "";
+    $("#waKey").placeholder = "已保存（留空则保持）";
+  }
+
+  $("#loc").addEventListener("input", e => {
+    clearTimeout(sugTimer);
+    sugTimer = setTimeout(() => searchLoc(e.target.value), 280);
+  });
+  $("#loc").addEventListener("keydown", async e => {
+    if (e.key === "Escape") { $("#suggest").hidden = true; return; }
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    clearTimeout(sugTimer);
+    if (!$("#suggest").hidden && sugItems.length) { applyPlace(sugItems[0]); return; }
+    if (await resolveInput()) run();
+  });
+  $("#go").onclick = async () => { if (await resolveInput()) run(); };
+  $("#date").addEventListener("change", e => { state.date = e.target.value; markDirty(); });
+  $$("#mode button").forEach(b => b.onclick = () => {
+    $$("#mode button").forEach(x => x.classList.remove("on"));
+    b.classList.add("on");
+    state.mode = b.dataset.mode;
+    // 朝霞/晚霞的结果都已随主查询取回，切换只需本地重绘
+    if (state.data) render(state.data);
+    if (state.week) renderWeek(state.week);
+    if (state.data) markDirty();   // 方位雷达按新事件时刻重取，等用户点按钮
+  });
+  $$("#quick button").forEach(b => b.onclick = () => {
+    if (!b.dataset.city) return;
+    applyPlace({ lat: +b.dataset.lat, lon: +b.dataset.lon, name: b.dataset.city });
+  });
+  $("#coordToggle").onclick = () => openCoord($("#coordPanel").hidden);
+  $("#coordCancel").onclick = () => { openCoord(false); coordHint(); };
+  $("#coordApply").onclick = () => { if (applyCoord()) { openCoord(false); markDirty(); } };
+  ["#inLat", "#inLon"].forEach(sel => {
+    const el = $(sel);
+    el.addEventListener("keydown", e => {
+      if (e.key === "Enter") { e.preventDefault(); if (applyCoord()) { openCoord(false); markDirty(); } }
+      if (e.key === "Escape") { openCoord(false); coordHint(); }
+    });
+    el.addEventListener("input", () => {
+      const v = readCoord();
+      if (v) coordHint(v.lat.toFixed(4) + "°N  " + v.lon.toFixed(4) + "°E · 回车应用", false);
+    });
+  });
+  $("#geo").onclick = () => {
+    if (!navigator.geolocation) return toast("此浏览器不支持定位");
+    navigator.geolocation.getCurrentPosition(
+      p => applyPlace({ lat: +p.coords.latitude.toFixed(4), lon: +p.coords.longitude.toFixed(4),
+        name: p.coords.latitude.toFixed(3) + "," + p.coords.longitude.toFixed(3) }),
+      e => toast("定位失败：" + (e.message || "权限被拒绝"))
+    );
+  };
+  $("#waSave").onclick = () => {
+    const v = ($("#waKey").value || "").trim();
+    if (!v) { toast("请输入 Key"); return; }
+    state.waKey = v;
+    try { localStorage.setItem("skyglow:waKey", v); } catch (e) { }
+    $("#waSp").textContent = "已配置（…" + v.slice(-4) + "）";
+    $("#waKey").value = "";
+    $("#waKey").placeholder = "已保存（留空则保持）";
+    toast("已保存，点「开始预测」后生效");
+    markDirty();
+  };
+  $("#waClear").onclick = () => {
+    state.waKey = null;
+    try { localStorage.removeItem("skyglow:waKey"); } catch (e) { }
+    $("#waSp").textContent = "未配置";
+    $("#waKey").placeholder = "WeatherAPI Key（可选，仅存本机）";
+    toast("已清除，点「开始预测」后生效");
+    markDirty();
+  };
+
+  window.addEventListener("resize", () => {
+    if (state.data) drawTimeline(state.data.results[state.mode]
+      && (state.data.results[state.mode].sources.openmeteo
+        || Object.values(state.data.results[state.mode].sources).find(v => !v.error)));
+    if (state.radar) renderRadar(state.radar);
+  });
+
+  // 首屏不自动取数：等用户确认地点与日期后点「开始预测」
+  $("#srcList").innerHTML = '<div class="empty">已选择 <b>' + state.name + '</b> · '
+    + $("#date").value + '，点击「开始预测」获取结果</div>';
+  $("#weekGrid").innerHTML = '<div class="empty">点击「开始预测」后显示七日趋势</div>';
+  $("#heroPct").innerHTML = '—<small>%</small>';
+  $("#heroGrade").textContent = '尚未预测';
+}
+
+init();
+})();
+</script>
+</body>
+</html>
